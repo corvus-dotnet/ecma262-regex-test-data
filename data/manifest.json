@@ -1,0 +1,31 @@
+{
+  "node": "v24.11.0",
+  "v8": "13.6.233.10-node.28",
+  "unicode": "16.0",
+  "files": [
+    {
+      "file": "hand-written.jsonl",
+      "patterns": 783,
+      "valid_unicode": 556,
+      "valid_legacy_only": 157,
+      "not_valid": 70,
+      "tests": 194649
+    },
+    {
+      "file": "flags.jsonl",
+      "patterns": 600,
+      "valid_unicode": 436,
+      "valid_legacy_only": 164,
+      "not_valid": 0,
+      "tests": 163800
+    },
+    {
+      "file": "generated.jsonl",
+      "patterns": 60000,
+      "valid_unicode": 22617,
+      "valid_legacy_only": 12710,
+      "not_valid": 24673,
+      "tests": 182000
+    }
+  ]
+}
