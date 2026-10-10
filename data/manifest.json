@@ -2,6 +2,8 @@
   "node": "v24.11.0",
   "v8": "13.6.233.10-node.28",
   "unicode": "16.0",
+  "backtrack_budget": 250000,
+  "time_limit_ms": 250,
   "files": [
     {
       "file": "hand-written.jsonl",
@@ -26,6 +28,50 @@
       "valid_legacy_only": 12710,
       "not_valid": 24673,
       "tests": 182000
+    },
+    {
+      "file": "anchored-lists.jsonl",
+      "patterns": 6000,
+      "valid_unicode": 5880,
+      "valid_legacy_only": 20,
+      "not_valid": 100,
+      "tests": 342200,
+      "candidates": 6000,
+      "dropped_for_backtracks": 0,
+      "dropped_for_time": 0
+    },
+    {
+      "file": "empty-loops.jsonl",
+      "patterns": 6838,
+      "valid_unicode": 6530,
+      "valid_legacy_only": 308,
+      "not_valid": 0,
+      "tests": 341900,
+      "candidates": 7000,
+      "dropped_for_backtracks": 162,
+      "dropped_for_time": 0
+    },
+    {
+      "file": "line-terminators.jsonl",
+      "patterns": 3000,
+      "valid_unicode": 3000,
+      "valid_legacy_only": 0,
+      "not_valid": 0,
+      "tests": 300000,
+      "candidates": 3000,
+      "dropped_for_backtracks": 0,
+      "dropped_for_time": 0
+    },
+    {
+      "file": "word-boundaries.jsonl",
+      "patterns": 2000,
+      "valid_unicode": 2000,
+      "valid_legacy_only": 0,
+      "not_valid": 0,
+      "tests": 542000,
+      "candidates": 2000,
+      "dropped_for_backtracks": 0,
+      "dropped_for_time": 0
     }
   ]
 }

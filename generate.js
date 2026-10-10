@@ -9,6 +9,9 @@
 // For the patterns that have texts, each text has V8's answer for each of the two that is valid: RegExp.test, which
 // asks whether the pattern matches anywhere in the text.
 //
+// After its own three files it writes the families of families.js, which are patterns built around particular classes
+// of fault. Those are matched in worker threads within limits (timed.js). verify.js checks all the files against V8.
+//
 // The pattern lists and the pseudo-random generator are those of the oracle that the Corvus JSON Schema evaluators
 // are tested against (https://github.com/corvus-dotnet/Corvus.JsonSchema), so this data set is the same oracle,
 // written out in full.
@@ -381,7 +384,38 @@ for (let i = 0; i < randomCount; i++) {
 }
 files.push(write("generated.jsonl", generated));
 
-fs.writeFileSync(path.join(out, "manifest.json"), JSON.stringify({
-  node: process.version, v8: process.versions.v8, unicode: process.versions.unicode, files,
-}, null, 2) + "\n");
-for (const f of files) console.log(`${f.file}: ${f.patterns} patterns, ${f.tests} tests`);
+// The families: patterns built around classes of fault that testing implementations against V8 has found. They have
+// lists and seeds of their own in families.js, so they do not disturb the three files above.
+//
+// Some of them make a backtracking matcher take a very long time, so V8 is asked about them in worker threads within
+// two limits (see timed.js). A pattern is dropped, and not recorded, when the search of any one of its texts needs
+// the budget of backtracks or more, or takes V8 longer than the time limit. The budget is a count, which is the same
+// on every machine, and it is low enough that the time limit should never be the one that decides.
+const { families } = require("./families");
+const { evaluate, withBudget } = require("./timed");
+const limits = { backtracks: 250000, limitMs: 250, threads: 4 };
+
+(async () => {
+  if (!withBudget) console.error("This V8 has no backtrack limit: only the time limit applies, and it varies.");
+  for (const family of families()) {
+    const { records, overBudget, overTime, slowestKeptMs } = await evaluate(family.source, family.patterns,
+      family.texts, limits);
+    const kept = new Set(records.map((r) => r.pattern));
+    for (const [pattern, text] of family.seeds) {
+      if (!kept.has(pattern) || !family.texts.includes(text)) throw new Error("lost a seed: " + pattern);
+    }
+    files.push({
+      ...write(family.source + ".jsonl", records),
+      candidates: family.patterns.length,
+      dropped_for_backtracks: overBudget.length,
+      dropped_for_time: overTime.length,
+    });
+    if (process.env.TIMES) console.error(`${family.source}: slowest kept ${slowestKeptMs.toFixed(1)} ms`);
+  }
+
+  fs.writeFileSync(path.join(out, "manifest.json"), JSON.stringify({
+    node: process.version, v8: process.versions.v8, unicode: process.versions.unicode,
+    backtrack_budget: withBudget ? limits.backtracks : null, time_limit_ms: limits.limitMs, files,
+  }, null, 2) + "\n");
+  for (const f of files) console.log(`${f.file}: ${f.patterns} patterns, ${f.tests} tests`);
+})().catch((e) => { console.error(e); process.exit(1); });
