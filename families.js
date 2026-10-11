@@ -491,8 +491,11 @@ function wordBoundaries() {
   return { source: "word-boundaries", seeds: wordBoundarySeeds, patterns, texts };
 }
 
+// The four families above, then those of more-families.js, which were written later and are built with the same
+// pieces.
 function families() {
-  return [anchoredLists(), emptyLoops(), lineTerminators(), wordBoundaries()];
+  const { moreFamilies } = require("./more-families");
+  return [anchoredLists(), emptyLoops(), lineTerminators(), wordBoundaries(), ...moreFamilies()];
 }
 
-module.exports = { families };
+module.exports = { families, rng, pick, chance, unique, exhaustive, withRandomTexts, assemble };

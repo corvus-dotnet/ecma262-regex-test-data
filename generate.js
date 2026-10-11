@@ -9,8 +9,10 @@
 // For the patterns that have texts, each text has V8's answer for each of the two that is valid: RegExp.test, which
 // asks whether the pattern matches anywhere in the text.
 //
-// After its own three files it writes the families of families.js, which are patterns built around particular classes
-// of fault. Those are matched in worker threads within limits (timed.js). verify.js checks all the files against V8.
+// After its own three files it writes the families of families.js and more-families.js, which are patterns built
+// around particular classes of fault. Those are matched in worker threads within limits (timed.js), and the later
+// families are searched for answers of V8's that are not ECMA-262's (deviations.js). verify.js checks all the files
+// against V8.
 //
 // The pattern lists and the pseudo-random generator are those of the oracle that the Corvus JSON Schema evaluators
 // are tested against (https://github.com/corvus-dotnet/Corvus.JsonSchema), so this data set is the same oracle,
@@ -391,25 +393,34 @@ files.push(write("generated.jsonl", generated));
 // two limits (see timed.js). A pattern is dropped, and not recorded, when the search of any one of its texts needs
 // the budget of backtracks or more, or takes V8 longer than the time limit. The budget is a count, which is the same
 // on every machine, and it is low enough that the time limit should never be the one that decides.
+//
+// The later families (more-families.js) have patterns with flags and with texts of their own, and V8 is known to
+// answer some of their kind wrongly. deviations.js finds those records and marks them.
 const { families } = require("./families");
 const { evaluate, withBudget } = require("./timed");
+const { mark } = require("./deviations");
 const limits = { backtracks: 250000, limitMs: 250, threads: 4 };
 
 (async () => {
   if (!withBudget) console.error("This V8 has no backtrack limit: only the time limit applies, and it varies.");
   for (const family of families()) {
     const { records, overBudget, overTime, slowestKeptMs } = await evaluate(family.source, family.patterns,
-      family.texts, limits);
-    const kept = new Set(records.map((r) => r.pattern));
-    for (const [pattern, text] of family.seeds) {
-      if (!kept.has(pattern) || !family.texts.includes(text)) throw new Error("lost a seed: " + pattern);
+      family.texts, limits, family.lists);
+    const kept = new Map(records.map((r) => [r.flags + "/" + r.pattern, r]));
+    for (const [pattern, text, flags] of family.seeds) {
+      const r = kept.get((flags || "") + "/" + pattern);
+      // A seed that is not valid has no text.
+      if (!r || (text !== null && !r.tests.some((t) => t.text === text))) throw new Error("lost a seed: " + pattern);
     }
-    files.push({
+    const deviations = family.deviations ? await mark(family, records) : null;
+    const entry = {
       ...write(family.source + ".jsonl", records),
       candidates: family.patterns.length,
       dropped_for_backtracks: overBudget.length,
       dropped_for_time: overTime.length,
-    });
+    };
+    if (deviations) entry.v8_deviations = deviations;
+    files.push(entry);
     if (process.env.TIMES) console.error(`${family.source}: slowest kept ${slowestKeptMs.toFixed(1)} ms`);
   }
 

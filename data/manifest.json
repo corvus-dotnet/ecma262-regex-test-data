@@ -72,6 +72,87 @@
       "candidates": 2000,
       "dropped_for_backtracks": 0,
       "dropped_for_time": 0
+    },
+    {
+      "file": "backreferences.jsonl",
+      "patterns": 3871,
+      "valid_unicode": 3497,
+      "valid_legacy_only": 374,
+      "not_valid": 0,
+      "tests": 514843,
+      "candidates": 4000,
+      "dropped_for_backtracks": 129,
+      "dropped_for_time": 0,
+      "v8_deviations": {}
+    },
+    {
+      "file": "lookarounds.jsonl",
+      "patterns": 4499,
+      "valid_unicode": 4499,
+      "valid_legacy_only": 0,
+      "not_valid": 0,
+      "tests": 590167,
+      "candidates": 4499,
+      "dropped_for_backtracks": 0,
+      "dropped_for_time": 0,
+      "v8_deviations": {}
+    },
+    {
+      "file": "case-folding.jsonl",
+      "patterns": 2863,
+      "valid_unicode": 2078,
+      "valid_legacy_only": 785,
+      "not_valid": 0,
+      "tests": 407080,
+      "candidates": 2864,
+      "dropped_for_backtracks": 1,
+      "dropped_for_time": 0,
+      "v8_deviations": {
+        "unstable": 25,
+        "surrogate-pair-start": 1,
+        "modifier-group": 20,
+        "full-case-folding": 6
+      }
+    },
+    {
+      "file": "code-units.jsonl",
+      "patterns": 3000,
+      "valid_unicode": 1303,
+      "valid_legacy_only": 1525,
+      "not_valid": 172,
+      "tests": 296940,
+      "candidates": 3000,
+      "dropped_for_backtracks": 0,
+      "dropped_for_time": 0,
+      "v8_deviations": {
+        "surrogate-pair-start": 2
+      }
+    },
+    {
+      "file": "lone-surrogates.jsonl",
+      "patterns": 1500,
+      "valid_unicode": 733,
+      "valid_legacy_only": 767,
+      "not_valid": 0,
+      "tests": 69000,
+      "candidates": 1500,
+      "dropped_for_backtracks": 0,
+      "dropped_for_time": 0,
+      "v8_deviations": {
+        "surrogate-pair-start": 2
+      }
+    },
+    {
+      "file": "engine-faults.jsonl",
+      "patterns": 3885,
+      "valid_unicode": 2910,
+      "valid_legacy_only": 347,
+      "not_valid": 628,
+      "tests": 377812,
+      "candidates": 4000,
+      "dropped_for_backtracks": 115,
+      "dropped_for_time": 0,
+      "v8_deviations": {}
     }
   ]
 }

@@ -13,7 +13,12 @@
 // a word boundary in a case-insensitive modifier group, (?i:\Bs) and (?i:\bk\b), were seen to change from run to run.
 // V8 compiles a regular expression differently once a process has compiled a great many, and it gets these two
 // wrong in one of the two ways. A process with one file to read answers as the generator did. No record of the
-// families changes with V8's optimisation switched off, or with its interpreter in place of its compiler.
+// first four families changes with V8's optimisation switched off, or with its interpreter in place of its compiler.
+// In the later families a record that does change is marked "unstable" and has no tests (see deviations.js), so
+// there is nothing of it to compare but its validity.
+//
+// It also checks the marks themselves: that a marked record of the later families names its class, that an unstable
+// one has no tests, and that manifest.json counts each class as the file has it.
 'use strict';
 
 const fs = require("fs");
@@ -45,7 +50,7 @@ for (const name of [...listed, ...found.filter((n) => !listed.includes(n))]) {
   const child = spawnSync(process.execPath, [...process.execArgv, __filename, "--file", dir, name],
     { encoding: "utf8", maxBuffer: 1 << 26 });
   if (child.status !== 0) { problem(`${name}: could not be checked: ${child.stderr}`); continue; }
-  const { count, answers, disagreements, messages } = JSON.parse(child.stdout);
+  const { count, answers, disagreements, messages, deviations } = JSON.parse(child.stdout);
   for (const m of messages) problem(`${name}: ${m}`);
   problems += Math.max(0, disagreements - messages.length);
 
@@ -55,6 +60,11 @@ for (const name of [...listed, ...found.filter((n) => !listed.includes(n))]) {
   } else {
     for (const k of Object.keys(count)) {
       if (entry[k] !== count[k]) problem(`${name}: ${k} is ${count[k]}, and manifest.json says ${entry[k]}`);
+    }
+    const sorted = (o) => JSON.stringify(Object.entries(o).sort());
+    if ("v8_deviations" in entry && sorted(entry.v8_deviations) !== sorted(deviations)) {
+      problem(`${name}: the deviations are ${JSON.stringify(deviations)}, and manifest.json says `
+        + JSON.stringify(entry.v8_deviations));
     }
     if ("candidates" in entry
       && entry.candidates !== count.patterns + entry.dropped_for_backtracks + entry.dropped_for_time) {
@@ -91,6 +101,8 @@ function check(dir, name) {
   const count = { patterns: 0, valid_unicode: 0, valid_legacy_only: 0, not_valid: 0, tests: 0 };
   let answers = 0, disagreements = 0;
   const disagree = (message) => { disagreements++; say(message); };
+  // The marked records by class.
+  const deviations = {};
 
   for (const line of lines) {
     const r = JSON.parse(line);
@@ -110,6 +122,12 @@ function check(dir, name) {
     else if (r.valid.legacy) count.valid_legacy_only++;
     else count.not_valid++;
 
+    if ("deviation" in r) {
+      if (r.v8_deviation !== true || typeof r.deviation !== "string") disagree(`${what} has a mark of the wrong shape`);
+      if (r.deviation === "unstable" && r.tests) disagree(`${what} is unstable and has tests`);
+      deviations[r.deviation] = (deviations[r.deviation] || 0) + 1;
+    }
+
     if (!r.tests) continue;
     if (!r.valid.unicode && !r.valid.legacy) disagree(`${what} is not valid and has tests`);
     for (const t of r.tests) {
@@ -124,5 +142,5 @@ function check(dir, name) {
       }
     }
   }
-  return { count, answers, disagreements, messages };
+  return { count, answers, disagreements, messages, deviations };
 }

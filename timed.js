@@ -11,7 +11,8 @@
 // still inside one match when the limit passes is terminated and replaced. The budget is set far enough below this
 // that it should drop nothing. It is here so that a run always finishes.
 //
-// The records have the same shape as those generate.js writes for the other files.
+// A pattern is a string, or { pattern, flags, texts } for one that has flags (i, m, s) or a list of texts of its own:
+// texts is then an index into lists. The records have the same shape as those generate.js writes for the other files.
 'use strict';
 
 const { Worker, isMainThread, parentPort, workerData } = require("worker_threads");
@@ -37,22 +38,25 @@ function budgeted() {
 }
 
 // In a worker: the patterns at first, first + step, first + 2 * step and so on.
-function work({ source, patterns, texts, first, step, backtracks, limitMs, shared, skip }) {
+function work({ source, patterns, texts: common, lists, first, step, backtracks, limitMs, shared, skip }) {
   const progress = new Int32Array(shared);
   const make = budgeted();
   for (let i = first; i < patterns.length; i += step) {
     if (skip.includes(i)) continue;
-    const pattern = patterns[i];
+    const item = patterns[i];
+    const pattern = typeof item === "string" ? item : item.pattern;
+    const flags = typeof item === "string" ? "" : item.flags || "";
+    const texts = typeof item === "string" || item.texts === undefined ? common : lists[item.texts];
     Atomics.store(progress, 0, i);
     let u = null, l = null;
-    try { u = new RegExp(pattern, "u"); } catch (e) {}
-    try { l = new RegExp(pattern, ""); } catch (e) {}
-    const r = { pattern, flags: "", source, valid: { unicode: !!u, legacy: !!l } };
+    try { u = new RegExp(pattern, flags + "u"); } catch (e) {}
+    try { l = new RegExp(pattern, flags); } catch (e) {}
+    const r = { pattern, flags, source, valid: { unicode: !!u, legacy: !!l } };
     // With "|$" after it the pattern matches every text: at the end of the text if nowhere sooner, once every earlier
     // start has been tried. So this says no only when it ran out of backtracks.
     const within = "(?:" + pattern + ")|$";
-    const bu = make && u ? make(within, "u", backtracks) : null;
-    const bl = make && l ? make(within, "", backtracks) : null;
+    const bu = make && u ? make(within, flags + "u", backtracks) : null;
+    const bl = make && l ? make(within, flags, backtracks) : null;
     let slowest = 0, overBudget = false;
     if (u || l) {
       r.tests = [];
@@ -80,7 +84,7 @@ function work({ source, patterns, texts, first, step, backtracks, limitMs, share
 
 // Resolves to { records, overBudget, overTime, slowestKeptMs }: the records of the patterns that V8 answered within
 // the limits, in the order of the patterns, and the patterns that were dropped for each limit.
-function evaluate(source, patterns, texts, { backtracks, limitMs, threads }) {
+function evaluate(source, patterns, texts, { backtracks, limitMs, threads }, lists = []) {
   return new Promise((resolve, reject) => {
     const results = new Array(patterns.length);
     const times = new Array(patterns.length).fill(0);
@@ -96,7 +100,7 @@ function evaluate(source, patterns, texts, { backtracks, limitMs, threads }) {
           records.push(results[i]);
           if (times[i] > slowestKeptMs) slowestKeptMs = times[i];
         } else {
-          (budget[i] ? overBudget : overTime).push(patterns[i]);
+          (budget[i] ? overBudget : overTime).push(typeof patterns[i] === "string" ? patterns[i] : patterns[i].pattern);
         }
       }
       resolve({ records, overBudget, overTime, slowestKeptMs });
@@ -108,7 +112,7 @@ function evaluate(source, patterns, texts, { backtracks, limitMs, threads }) {
       const shared = new SharedArrayBuffer(8);
       const progress = new Int32Array(shared);
       const worker = new Worker(__filename, {
-        workerData: { source, patterns, texts, first, step, backtracks, limitMs, shared, skip: killed.slice() },
+        workerData: { source, patterns, texts, lists, first, step, backtracks, limitMs, shared, skip: killed.slice() },
       });
       // What the worker has answered so far. Its replacement starts after that, because an answer that was on its way
       // when the worker was terminated is lost.
