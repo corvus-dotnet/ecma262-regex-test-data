@@ -33,6 +33,7 @@ character is a `\uXXXX` escape, so no tool has to agree about an encoding.
 | `code-units.jsonl` | 3,000 | 296,940 | Patterns that are valid only without the `u` flag, and so are matched by UTF-16 code unit, against texts with characters beyond the Basic Multilingual Plane. Each is matched against 105 texts. |
 | `lone-surrogates.jsonl` | 1,500 | 69,000 | The same kind of pattern against 46 texts that hold half of a surrogate pair. The texts are not valid Unicode, which is why they have a file of their own. |
 | `engine-faults.jsonl` | 3,885 | 377,812 | Patterns on which a host engine itself goes wrong, and syntax that host engines have and ECMA-262 has not. 628 of them are not valid. The others are matched against 116 texts. |
+| `captures.jsonl` | 3,100 or so | 90,000 or so | Not `test` but the rest of `RegExp`: where the match is and what each group captured (`exec`), the matches of a global search, the sticky flag, `replace` with every form of `$`, and `split`, for every pattern of `hand-written.jsonl` and `flags.jsonl` and one record in ten of each family. See [captures](#capturesjsonl). |
 | `manifest.json` | | | The versions of Node, V8 and Unicode the data was generated with, the counts of each file, and for the families the limits and how many patterns they dropped. |
 
 ## A record
@@ -257,6 +258,33 @@ without it. `\z` is the letter `z`. `(?=a)*` is allowed. `(?i)a`, `a*+`, `(?>a)`
 errors in both. Each is here with V8's verdicts, and with its answers where it is valid.
 
 Example. `(?:a|^){0}x` matches `ax`. The group is not matched at all, so its `^` anchors nothing.
+
+### `captures.jsonl`
+
+For a regular expression library rather than a JSON Schema implementation: what the members built on captures
+give. Each record has the pattern, flags and validity of a record of another file (its `from` says which), with up
+to 40 of that record's texts. Each test holds, under `unicode` and under `legacy` for each grammar the pattern is
+valid in, an object rather than a boolean:
+
+| Field | What V8 gives |
+|---|---|
+| `exec` | `null`, or `[start, end]` for the match then `[start, end]` or `null` for each group, in UTF-16 code units, with `lastIndex` 0. |
+| `all` | The `exec` results of a global search (`matchAll` with the `g` flag), at most 20 of them. |
+| `sticky` | `exec` with the `y` flag and `lastIndex` 1, or `null` when the text is empty. |
+| `replace` | `text.replace(pattern, "<$&|$1|$2|$10|$<a>|$$|$`|$'>")` with no `g` flag: every form of `$`, for groups the pattern may not have. |
+| `replaceAll` | The same with the `g` flag. |
+| `split` | `text.split(pattern)`, with `null` for a group that did not take part. |
+| `split3` | `text.split(pattern, 3)`. |
+
+Records marked `v8_deviation` in their own file are left out. A test whose answers under the `u` flag have a match
+that starts between the halves of a surrogate pair is marked on the test itself, `"v8_deviation": true` with
+`"deviation": "surrogate-pair-start"` (see [where V8 departs from ECMA-262](#where-v8-departs-from-ecma-262)): its
+answers are V8's, and ECMA-262's differ. A test on which V8, in the generator's process, disagrees with the source
+file's own `test` answer (the `unstable` class: a case-insensitive modifier group answered differently once V8
+holds much compiled code) is marked `"deviation": "unstable"` and has no answers. `generate-captures.js` writes it
+from the other files,
+and `verify-captures.js` checks it; `verify.js` runs that for this file. The file is written by the Node the
+manifest's entry for it names.
 
 ### The sizes
 

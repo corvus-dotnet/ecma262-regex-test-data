@@ -153,6 +153,17 @@
       "dropped_for_backtracks": 115,
       "dropped_for_time": 0,
       "v8_deviations": {}
+    },
+    {
+      "file": "captures.jsonl",
+      "patterns": 5188,
+      "tests": 207485,
+      "v8_deviations": {
+        "surrogate-pair-start": 16,
+        "unstable": 1
+      },
+      "node": "v24.22.0",
+      "v8": "13.6.233.17-node.57"
     }
   ]
 }

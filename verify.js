@@ -47,6 +47,13 @@ if (manifest.node !== process.version) {
 const totals = { patterns: 0, tests: 0, answers: 0, disagreements: 0 };
 for (const name of [...listed, ...found.filter((n) => !listed.includes(n))]) {
   if (!found.includes(name)) { problem(`${name}: in manifest.json, and not there`); continue; }
+  if (name === "captures.jsonl") {
+    // Its records hold exec, replace and split answers, which verify-captures.js checks.
+    const child = spawnSync(process.execPath, [path.join(__dirname, "verify-captures.js"), dir], { encoding: "utf8", maxBuffer: 1 << 26 });
+    process.stdout.write(child.stdout);
+    if (child.status !== 0) problem(`${name}: verify-captures.js found problems`);
+    continue;
+  }
   const child = spawnSync(process.execPath, [...process.execArgv, __filename, "--file", dir, name],
     { encoding: "utf8", maxBuffer: 1 << 26 });
   if (child.status !== 0) { problem(`${name}: could not be checked: ${child.stderr}`); continue; }
