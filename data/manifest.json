@@ -168,7 +168,8 @@
       "dropped_for_time": 0,
       "v8_deviations": {
         "unstable": 14,
-        "single-character-string-case": 120
+        "single-character-string-case": 136,
+        "ascii-case-folding": 24
       }
     },
     {

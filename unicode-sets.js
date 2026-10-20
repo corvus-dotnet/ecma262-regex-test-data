@@ -474,19 +474,30 @@ function singlesAsCharacters(pattern) {
       (units.length === 1 ? singles : others).push(alternative);
     }
     if (singles.length === 0) return whole;
-    return singles.join("") + (others.length > 0 ? "\\q{" + others.join("|") + "}" : "");
+    // As a nested class, so that it stays one operand where it stood beside -- or &&.
+    return "[" + singles.join("") + (others.length > 0 ? "\\q{" + others.join("|") + "}" : "") + "]";
   });
 }
 
-// The class of V8's fault a record shows, or null: V8's own answers against the rewritten pattern's.
+// The pattern with \p{ASCII} written as the range it is, as a nested class. With the i flag V8 folds the property
+// without the long s and the Kelvin sign, which fold to s and k, where it folds the range with them.
+function asciiAsRange(pattern) {
+  return pattern.replace(/\\p\{ASCII\}/g, "[\\u0000-\\u007f]");
+}
+
+// The class of V8's fault a record shows, or null: V8's own answers against a rewritten pattern's, for each
+// rewriting that takes a construct V8 gets wrong under the i flag to one it gets right.
 function check(r) {
-  if (!r.valid.unicode_sets || !/\\q\{/.test(r.pattern)) return null;
+  if (!r.valid.unicode_sets) return null;
   if (!r.flags.includes("i") && !caseInsensitive.test(r.pattern)) return null;
-  const rewritten = singlesAsCharacters(r.pattern);
-  if (rewritten === r.pattern) return null;
-  let again = null;
-  try { again = new RegExp(rewritten, r.flags + "v"); } catch (e) { return null; }
-  return r.tests.some((t) => again.test(t.text) !== t.unicode_sets) ? "single-character-string-case" : null;
+  for (const [rewrite, deviation] of [[singlesAsCharacters, "single-character-string-case"], [asciiAsRange, "ascii-case-folding"]]) {
+    const rewritten = rewrite(r.pattern);
+    if (rewritten === r.pattern) continue;
+    let again = null;
+    try { again = new RegExp(rewritten, r.flags + "v"); } catch (e) { continue; }
+    if (r.tests.some((t) => again.test(t.text) !== t.unicode_sets)) return deviation;
+  }
+  return null;
 }
 
 function unicodeSets() {

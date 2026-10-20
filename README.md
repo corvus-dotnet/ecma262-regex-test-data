@@ -374,7 +374,7 @@ the pattern then `)`, which means the same. Compare only the validity of a recor
 
 ## Where V8 departs from ECMA-262
 
-The answers are V8's, and in five known classes of pattern V8 13.6 is wrong, or does not always say the same. A
+The answers are V8's, and in six known classes of pattern V8 13.6 is wrong, or does not always say the same. A
 record of one of them is marked with `"v8_deviation": true`, and in the later families with a `deviation` that
 names the class. The answers of a marked record are still V8's. They should not be taken as the specification's.
 
@@ -384,7 +384,8 @@ names the class. The answers of a marked record are still V8's. They should not 
 | `unstable` | 25 in `case-folding.jsonl`, 14 in `unicode-sets.jsonl` | The answer depends on how V8 compiled the pattern, and so changes from one run to the next. All 39 have a case-insensitive modifier group, and the 14 a class with strings in it. The records have no `tests`. | `(?i:\Bs)` with the `u` flag on `s` and a long s (U+017F). False at first, true once V8 has switched its optimising compiler off. |
 | `surrogate-pair-start` | 2 in `code-units.jsonl`, 2 in `lone-surrogates.jsonl`, 1 in `case-folding.jsonl` | With the `u` flag a match starts between the two halves of a surrogate pair. ECMA-262 moves from one start to the next a code point at a time. | `/(?<!^.*)/u.exec("\u{10428}")` has index 1. So has `/\B/u.exec("a\u{10428}a")`, at index 2. Both should be null. |
 | `full-case-folding` | 6 in `case-folding.jsonl` | With the `i` and `u` flags a backreference is compared with the text by full case folding of the whole string. ECMA-262 compares one character at a time through Canonicalize, which is simple case folding. | `^(..)\1$` with `iu` matches the four characters sharp s, `S`, `s`, capital sharp s. `^(.)(.)\1\2$` does not. |
-| `single-character-string-case` | 120 in `unicode-sets.jsonl` | With the `i` and `v` flags a string of one character in `\q{...}` is not canonicalized against the text: `[\q{k}]` does not match `K`, where `[k]` does. ECMA-262 makes such a string a character of the class. | `^(?i:[\q{k}])$` |
+| `single-character-string-case` | 136 in `unicode-sets.jsonl` | With the `i` and `v` flags a string of one character in `\q{...}` is not canonicalized against the text: `[\q{k}]` does not match `K`, where `[k]` does. ECMA-262 makes such a string a character of the class. | `^(?i:[\q{k}])$` |
+| `ascii-case-folding` | 24 in `unicode-sets.jsonl` | With the `i` and `v` flags `\p{ASCII}` is folded without the long s and the Kelvin sign, which fold to `s` and `k`, where the same range written out, `[\u0000-\u007f]`, is folded with them. ECMA-262 folds the two alike. | `[\p{ASCII}]` with `i` on the long s |
 
 The six marked records of `hand-written.jsonl` have no `deviation` field. One of them, `(?i:\Bs)`, is unstable as
 well, and so is `(?i:\bk\b)` in the same file, which is not marked. `flags.jsonl` covers what the modifier groups
@@ -409,10 +410,11 @@ How they are found. `deviations.js` looks at every record of the seven later fam
   `u` flag and without it. A record on which it disagrees with V8 is marked `modifier-group` when the pattern has
   a case-insensitive modifier group, and `full-case-folding` when it has the `i` flag and a backreference. Any
   other disagreement stops the generator, and there is none.
-- **Single-character strings.** `reference.js` does not read the `v` flag's grammar. `unicode-sets.js` finds this
-  class itself: a record with the `i` flag or a case-insensitive modifier group and a `\q{...}` has every string of
-  one character in it written as a character of the class instead, which is what ECMA-262 makes of it, and V8 is
-  asked again. A record whose answers change is marked.
+- **Single-character strings, and the folding of `\p{ASCII}`.** `reference.js` does not read the `v` flag's
+  grammar. `unicode-sets.js` finds these two classes itself, by rewriting: a record with the `i` flag or a
+  case-insensitive modifier group has every string of one character in a `\q{...}` written as a character of the
+  class instead, which is what ECMA-262 makes of it, and `\p{ASCII}` written as the range `[\u0000-\u007f]`, and V8
+  is asked again. A record whose answers change is marked with the class of the rewriting that changed them.
 
 `reference.js` is not the oracle, and it is not asked about the other files when they are generated. It was run
 over them once as a check, and the numbers of that run are in the section on checking.

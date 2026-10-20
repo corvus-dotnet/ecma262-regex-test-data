@@ -20,6 +20,9 @@
 //                         With the i and v flags V8 does not canonicalize the text against a string of one
 //                         character in \q{...}, where ECMA-262 makes such a string a character of the class.
 //                         Found by unicode-sets.js, which writes the string as a character and asks V8 again.
+//   ascii-case-folding    With the i and v flags V8 folds \p{ASCII} without the long s and the Kelvin sign, which
+//                         fold to s and k, where it folds the same range written out with them. Found by
+//                         unicode-sets.js, which writes the property as its range and asks V8 again.
 //
 // The records of the last three classes keep V8's answers, as the marked records of hand-written.jsonl do. A
 // disagreement with reference.js that is none of these stops the run, so that nothing is marked without a reason.
