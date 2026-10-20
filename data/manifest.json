@@ -155,6 +155,23 @@
       "v8_deviations": {}
     },
     {
+      "file": "unicode-sets.jsonl",
+      "patterns": 5520,
+      "valid_unicode": 1755,
+      "valid_legacy_only": 2920,
+      "not_valid": 205,
+      "tests": 795150,
+      "valid_unicode_sets": 4542,
+      "valid_unicode_sets_only": 640,
+      "candidates": 5520,
+      "dropped_for_backtracks": 0,
+      "dropped_for_time": 0,
+      "v8_deviations": {
+        "unstable": 14,
+        "single-character-string-case": 120
+      }
+    },
+    {
       "file": "captures.jsonl",
       "patterns": 5188,
       "tests": 207485,

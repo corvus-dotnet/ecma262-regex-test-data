@@ -12,7 +12,8 @@
 // that it should drop nothing. It is here so that a run always finishes.
 //
 // A pattern is a string, or { pattern, flags, texts } for one that has flags (i, m, s) or a list of texts of its own:
-// texts is then an index into lists. The records have the same shape as those generate.js writes for the other files.
+// texts is then an index into lists. The records have the same shape as those generate.js writes for the other files,
+// with a third mode, the v flag ("unicode_sets"), for a family that asks for it.
 'use strict';
 
 const { Worker, isMainThread, parentPort, workerData } = require("worker_threads");
@@ -38,7 +39,7 @@ function budgeted() {
 }
 
 // In a worker: the patterns at first, first + step, first + 2 * step and so on.
-function work({ source, patterns, texts: common, lists, first, step, backtracks, limitMs, shared, skip }) {
+function work({ source, patterns, texts: common, lists, first, step, backtracks, limitMs, shared, skip, unicodeSets }) {
   const progress = new Int32Array(shared);
   const make = budgeted();
   for (let i = first; i < patterns.length; i += step) {
@@ -48,26 +49,31 @@ function work({ source, patterns, texts: common, lists, first, step, backtracks,
     const flags = typeof item === "string" ? "" : item.flags || "";
     const texts = typeof item === "string" || item.texts === undefined ? common : lists[item.texts];
     Atomics.store(progress, 0, i);
-    let u = null, l = null;
+    let u = null, l = null, v = null;
     try { u = new RegExp(pattern, flags + "u"); } catch (e) {}
     try { l = new RegExp(pattern, flags); } catch (e) {}
+    // A family for the v flag is answered in that mode too ("unicode_sets").
+    if (unicodeSets) { try { v = new RegExp(pattern, flags + "v"); } catch (e) {} }
     const r = { pattern, flags, source, valid: { unicode: !!u, legacy: !!l } };
+    if (unicodeSets) r.valid.unicode_sets = !!v;
     // With "|$" after it the pattern matches every text: at the end of the text if nowhere sooner, once every earlier
     // start has been tried. So this says no only when it ran out of backtracks.
     const within = "(?:" + pattern + ")|$";
     const bu = make && u ? make(within, flags + "u", backtracks) : null;
     const bl = make && l ? make(within, flags, backtracks) : null;
+    const bv = make && v ? make(within, flags + "v", backtracks) : null;
     let slowest = 0, overBudget = false;
-    if (u || l) {
+    if (u || l || v) {
       r.tests = [];
       for (const text of texts) {
         Atomics.add(progress, 1, 1);
-        if ((bu && !bu.test(text)) || (bl && !bl.test(text))) { overBudget = true; break; }
+        if ((bu && !bu.test(text)) || (bl && !bl.test(text)) || (bv && !bv.test(text))) { overBudget = true; break; }
         Atomics.add(progress, 1, 1);
         const started = process.hrtime.bigint();
         const t = { text };
         if (u) t.unicode = u.test(text);
         if (l) t.legacy = l.test(text);
+        if (v) t.unicode_sets = v.test(text);
         const ms = Number(process.hrtime.bigint() - started) / 1e6;
         if (ms > slowest) slowest = ms;
         if (ms > limitMs) break;
@@ -84,7 +90,7 @@ function work({ source, patterns, texts: common, lists, first, step, backtracks,
 
 // Resolves to { records, overBudget, overTime, slowestKeptMs }: the records of the patterns that V8 answered within
 // the limits, in the order of the patterns, and the patterns that were dropped for each limit.
-function evaluate(source, patterns, texts, { backtracks, limitMs, threads }, lists = []) {
+function evaluate(source, patterns, texts, { backtracks, limitMs, threads }, lists = [], unicodeSets = false) {
   return new Promise((resolve, reject) => {
     const results = new Array(patterns.length);
     const times = new Array(patterns.length).fill(0);
@@ -112,7 +118,7 @@ function evaluate(source, patterns, texts, { backtracks, limitMs, threads }, lis
       const shared = new SharedArrayBuffer(8);
       const progress = new Int32Array(shared);
       const worker = new Worker(__filename, {
-        workerData: { source, patterns, texts, lists, first, step, backtracks, limitMs, shared, skip: killed.slice() },
+        workerData: { source, patterns, texts, lists, first, step, backtracks, limitMs, shared, skip: killed.slice(), unicodeSets },
       });
       // What the worker has answered so far. Its replacement starts after that, because an answer that was on its way
       // when the worker was terminated is lost.

@@ -317,14 +317,20 @@ function line(value) {
 
 function write(name, records) {
   fs.writeFileSync(path.join(out, name), records.map(line).join(""));
-  return {
+  const entry = {
     file: name,
     patterns: records.length,
     valid_unicode: records.filter((r) => r.valid.unicode).length,
     valid_legacy_only: records.filter((r) => !r.valid.unicode && r.valid.legacy).length,
-    not_valid: records.filter((r) => !r.valid.unicode && !r.valid.legacy).length,
+    not_valid: records.filter((r) => !r.valid.unicode && !r.valid.legacy && !r.valid.unicode_sets).length,
     tests: records.reduce((n, r) => n + (r.tests ? r.tests.length : 0), 0),
   };
+  // A file answered with the v flag too counts the patterns valid in that mode, and those valid in it alone.
+  if (records.some((r) => "unicode_sets" in r.valid)) {
+    entry.valid_unicode_sets = records.filter((r) => r.valid.unicode_sets).length;
+    entry.valid_unicode_sets_only = records.filter((r) => r.valid.unicode_sets && !r.valid.unicode && !r.valid.legacy).length;
+  }
+  return entry;
 }
 
 const files = [];
@@ -405,7 +411,7 @@ const limits = { backtracks: 250000, limitMs: 250, threads: 4 };
   if (!withBudget) console.error("This V8 has no backtrack limit: only the time limit applies, and it varies.");
   for (const family of families()) {
     const { records, overBudget, overTime, slowestKeptMs } = await evaluate(family.source, family.patterns,
-      family.texts, limits, family.lists);
+      family.texts, limits, family.lists, family.unicodeSets);
     const kept = new Map(records.map((r) => [r.flags + "/" + r.pattern, r]));
     for (const [pattern, text, flags] of family.seeds) {
       const r = kept.get((flags || "") + "/" + pattern);
@@ -424,7 +430,13 @@ const limits = { backtracks: 250000, limitMs: 250, threads: 4 };
     if (process.env.TIMES) console.error(`${family.source}: slowest kept ${slowestKeptMs.toFixed(1)} ms`);
   }
 
-  fs.writeFileSync(path.join(out, "manifest.json"), JSON.stringify({
+  // captures.jsonl is written by generate-captures.js, which puts its own entry in the manifest: that entry is kept.
+  const manifestPath = path.join(out, "manifest.json");
+  if (fs.existsSync(manifestPath)) {
+    const captures = JSON.parse(fs.readFileSync(manifestPath, "utf8")).files.find((f) => f.file === "captures.jsonl");
+    if (captures) files.push(captures);
+  }
+  fs.writeFileSync(manifestPath, JSON.stringify({
     node: process.version, v8: process.versions.v8, unicode: process.versions.unicode,
     backtrack_budget: withBudget ? limits.backtracks : null, time_limit_ms: limits.limitMs, files,
   }, null, 2) + "\n");

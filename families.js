@@ -495,7 +495,8 @@ function wordBoundaries() {
 // pieces.
 function families() {
   const { moreFamilies } = require("./more-families");
-  return [anchoredLists(), emptyLoops(), lineTerminators(), wordBoundaries(), ...moreFamilies()];
+  const { unicodeSets } = require("./unicode-sets");
+  return [anchoredLists(), emptyLoops(), lineTerminators(), wordBoundaries(), ...moreFamilies(), unicodeSets()];
 }
 
 module.exports = { families, rng, pick, chance, unique, exhaustive, withRandomTexts, assemble };

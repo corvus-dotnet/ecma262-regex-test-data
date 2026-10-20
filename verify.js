@@ -123,11 +123,20 @@ function check(dir, name) {
     const unicode = compile(r.pattern, r.flags + "u"), legacy = compile(r.pattern, r.flags);
     if (!!unicode !== r.valid.unicode) disagree(`${what} valid with the u flag: ${!!unicode}`);
     if (!!legacy !== r.valid.legacy) disagree(`${what} valid without the u flag: ${!!legacy}`);
+    // A file answered with the v flag too: every record of it says whether the pattern is valid in that mode.
+    const sets = "unicode_sets" in r.valid;
+    const unicodeSets = sets ? compile(r.pattern, r.flags + "v") : null;
+    if (sets && typeof r.valid.unicode_sets !== "boolean") disagree(`${what} has a v verdict of the wrong shape`);
+    if (sets && !!unicodeSets !== r.valid.unicode_sets) disagree(`${what} valid with the v flag: ${!!unicodeSets}`);
+    if (sets && !("valid_unicode_sets" in count)) { count.valid_unicode_sets = 0; count.valid_unicode_sets_only = 0; }
+    if (!sets && "valid_unicode_sets" in count) disagree(`${what} has no v verdict where others of the file have`);
 
     count.patterns++;
     if (r.valid.unicode) count.valid_unicode++;
     else if (r.valid.legacy) count.valid_legacy_only++;
-    else count.not_valid++;
+    else if (!r.valid.unicode_sets) count.not_valid++;
+    if (r.valid.unicode_sets) count.valid_unicode_sets++;
+    if (r.valid.unicode_sets && !r.valid.unicode && !r.valid.legacy) count.valid_unicode_sets_only++;
 
     if ("deviation" in r) {
       if (r.v8_deviation !== true || typeof r.deviation !== "string") disagree(`${what} has a mark of the wrong shape`);
@@ -136,11 +145,13 @@ function check(dir, name) {
     }
 
     if (!r.tests) continue;
-    if (!r.valid.unicode && !r.valid.legacy) disagree(`${what} is not valid and has tests`);
+    if (!r.valid.unicode && !r.valid.legacy && !r.valid.unicode_sets) disagree(`${what} is not valid and has tests`);
+    const modes = [["unicode", unicode, r.valid.unicode], ["legacy", legacy, r.valid.legacy]];
+    if (sets) modes.push(["unicode_sets", unicodeSets, r.valid.unicode_sets]);
     for (const t of r.tests) {
       count.tests++;
       if (typeof t.text !== "string") { disagree(`${what} has a test with no text`); continue; }
-      for (const [mode, regex, valid] of [["unicode", unicode, r.valid.unicode], ["legacy", legacy, r.valid.legacy]]) {
+      for (const [mode, regex, valid] of modes) {
         if (mode in t !== valid) { disagree(`${what} on ${JSON.stringify(t.text)}: ${mode} answer`); continue; }
         if (!valid || !regex) continue;
         answers++;

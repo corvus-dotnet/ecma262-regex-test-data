@@ -16,6 +16,10 @@
 //   full-case-folding     With the i and u flags V8 compares a backreference with the text by full case folding of
 //                         the whole string, where ECMA-262 compares character by character through Canonicalize.
 //                         Found with the matcher of reference.js.
+//   single-character-string-case
+//                         With the i and v flags V8 does not canonicalize the text against a string of one
+//                         character in \q{...}, where ECMA-262 makes such a string a character of the class.
+//                         Found by unicode-sets.js, which writes the string as a character and asks V8 again.
 //
 // The records of the last three classes keep V8's answers, as the marked records of hand-written.jsonl do. A
 // disagreement with reference.js that is none of these stops the run, so that nothing is marked without a reason.
@@ -56,14 +60,17 @@ function answerAgain(state) {
       run(regex, k);
       kept.push(regex);
     }
-    for (const [pattern, flags, texts] of JSON.parse(input)) {
+    for (const [pattern, flags, texts, sets] of JSON.parse(input)) {
       if (state === "cold" && compiledCode() > 6 * megabyte) break;
       if (out.length % 256 === 255) kept.forEach(run);
-      let u = null, l = null;
+      let u = null, l = null, v = null;
       try { u = new RegExp(pattern, flags + "u"); } catch (e) {}
       try { l = new RegExp(pattern, flags); } catch (e) {}
-      let s = (u ? "U" : "-") + (l ? "L" : "-");
-      for (const text of texts) s += (u ? (u.test(text) ? "T" : "F") : "") + (l ? (l.test(text) ? "T" : "F") : "");
+      if (sets) { try { v = new RegExp(pattern, flags + "v"); } catch (e) {} }
+      let s = (u ? "U" : "-") + (l ? "L" : "-") + (sets ? (v ? "V" : "-") : "");
+      for (const text of texts) {
+        s += (u ? (u.test(text) ? "T" : "F") : "") + (l ? (l.test(text) ? "T" : "F") : "") + (v ? (v.test(text) ? "T" : "F") : "");
+      }
       out.push(s);
     }
     process.stdout.write(JSON.stringify(out));
@@ -71,9 +78,11 @@ function answerAgain(state) {
 }
 
 function answersOf(r) {
-  let s = (r.valid.unicode ? "U" : "-") + (r.valid.legacy ? "L" : "-");
+  const sets = "unicode_sets" in r.valid;
+  let s = (r.valid.unicode ? "U" : "-") + (r.valid.legacy ? "L" : "-") + (sets ? (r.valid.unicode_sets ? "V" : "-") : "");
   for (const t of r.tests || []) {
-    s += (r.valid.unicode ? (t.unicode ? "T" : "F") : "") + (r.valid.legacy ? (t.legacy ? "T" : "F") : "");
+    s += (r.valid.unicode ? (t.unicode ? "T" : "F") : "") + (r.valid.legacy ? (t.legacy ? "T" : "F") : "")
+      + (r.valid.unicode_sets ? (t.unicode_sets ? "T" : "F") : "");
   }
   return s;
 }
@@ -90,7 +99,7 @@ function under(v8Flags, state, records) {
       if (code !== 0) reject(new Error(`node ${v8Flags.join(" ")} (${state}) ended with ${code}`));
       else resolve(JSON.parse(output));
     });
-    child.stdin.end(JSON.stringify(records.map((r) => [r.pattern, r.flags, (r.tests || []).map((t) => t.text)])));
+    child.stdin.end(JSON.stringify(records.map((r) => [r.pattern, r.flags, (r.tests || []).map((t) => t.text), "unicode_sets" in r.valid])));
   });
 }
 
@@ -137,16 +146,27 @@ async function mark(family, records) {
     if (again.some((answers) => answers[k] !== mine)) set(r, "unstable");
   });
 
-  for (const r of records) {
-    if (r.v8_deviation || !r.valid.unicode || !r.tests) continue;
-    let sticky = null;
-    for (const t of r.tests) {
-      if (!pair.test(t.text)) continue;
-      sticky = sticky || new RegExp(r.pattern, r.flags + "uy");
-      if (fromEachStart(sticky, t.text) === t.unicode) continue;
-      if (!t.unicode) throw new Error(`no match of ${r.pattern} in ${JSON.stringify(t.text)}, and one from a start`);
-      set(r, "surrogate-pair-start");
-      break;
+  for (const [mode, flag] of [["unicode", "u"], ["unicode_sets", "v"]]) {
+    for (const r of records) {
+      if (r.v8_deviation || !r.valid[mode] || !r.tests) continue;
+      let sticky = null;
+      for (const t of r.tests) {
+        if (!pair.test(t.text)) continue;
+        sticky = sticky || new RegExp(r.pattern, r.flags + flag + "y");
+        if (fromEachStart(sticky, t.text) === t[mode]) continue;
+        if (!t[mode]) throw new Error(`no match of ${r.pattern} in ${JSON.stringify(t.text)}, and one from a start`);
+        set(r, "surrogate-pair-start");
+        break;
+      }
+    }
+  }
+
+  // A family may know a fault of V8's own and find the records it changes: check(record) names the class, or null.
+  if (family.check) {
+    for (const r of records) {
+      if (r.v8_deviation || !r.tests) continue;
+      const deviation = family.check(r);
+      if (deviation) set(r, deviation);
     }
   }
 
