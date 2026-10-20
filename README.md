@@ -360,6 +360,29 @@ Multilingual Plane for a legacy-only pattern if your engine matches code points.
 A record with flags can be given to an engine that takes none as a modifier group around the pattern, `(?i:` then
 the pattern then `)`, which means the same. Compare only the validity of a record that has `v8_deviation`.
 
+## How a runner judges an engine
+
+Engines are compared by the share of the data they answer as V8 does, so every runner asks the same questions and
+counts them the same way. A runner that departs from this says so beside its figures.
+
+- **What is skipped.** A test marked `v8_deviation`, and a record marked as one of V8's departures (section "Where
+  V8 departs from ECMA-262"). Nothing else.
+- **The grammars.** Each record is asked about under every grammar V8 judged it in: `unicode` (the record's flags
+  with `u`), `legacy` (its flags alone) and, where the record has it, `unicode_sets` (with `v`).
+- **Validity.** Under a grammar V8 found valid, an engine that refuses the pattern scores one *refused*; under a
+  grammar V8 found invalid, one that accepts it scores one *accepted invalid*. A correct verdict is not counted on
+  its own; it opens the tests.
+- **The tests.** Each test's answer under each valid grammar is one answer over UTF-16 and, when the text holds no
+  lone surrogate, one more over UTF-8. An engine with one encoding answers in that one only, and says which.
+- **`captures.jsonl`.** For each test and each valid grammar: `exec`, `all` (the global search), `sticky`,
+  `replace`, `replaceAll`, `split` and `split3` over UTF-16, and `exec`, `all`, `sticky`, `replace` and `replaceAll`
+  over UTF-8 when the text holds no lone surrogate. Each is one answer, right or wrong.
+- **No answer is a wrong answer.** A match that reaches the engine's time or memory limit, a crash or a hang scores
+  one *unanswered* (the runner's `limit` column) for that answer, and every answer the record would have had.
+- **The figure.** Right over everything judged: right, wrong, refused, accepted invalid and unanswered. An engine
+  that answers everything as V8 does is 100%; a runner's summary line gives all five counts, as the Corvus runners
+  print them (`right N  wrong N  refused-valid N  accepted-invalid N  limit N`).
+
 ## What to know before relying on it
 
 - **It records one implementation.** The answers are V8's (13.6, in Node 24.11.0), not the specification's. For the
