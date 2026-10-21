@@ -189,11 +189,11 @@
       "valid_unicode": 3925,
       "valid_legacy_only": 744,
       "not_valid": 213,
-      "tests": 547703,
+      "tests": 547818,
       "valid_unicode_sets": 4012,
       "valid_unicode_sets_only": 25,
       "v8_deviations": {
-        "unicode-version": 7221,
+        "unicode-version": 7216,
         "unstable": 1
       },
       "candidates": 4907,

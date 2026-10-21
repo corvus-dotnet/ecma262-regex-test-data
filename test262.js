@@ -20,7 +20,11 @@
 // and the last code point of each range and each code point listed alone, as a text of its own.
 //
 // Where test262's harness states the answer, as the property escape and extended class helpers do, it is compared
-// with V8's. They differ only where test262 has Unicode 17 and V8 13.6 Unicode 16: such a test is marked
+// with V8's. The property escape helper asserts that /^\p{...}+$/u matches the whole of a set, so each character of
+// it, and the file's other set is the complement. The helper of properties of strings and of the v flag's classes
+// asserts that the strings a class has, joined, match, and that the strings it has not, joined, do not. Each string
+// the class has is kept, and matches alone, and so is the join of those it has not; a string it has not is a text
+// with no answer of test262's, since it may match as several of the class's strings. They differ only where test262 has Unicode 17 and V8 13.6 Unicode 16: such a test is marked
 // "v8_deviation": true and "deviation": "unicode-version", keeps V8's answers, and holds test262's in
 // "test262_answer". A pattern with a property that only Unicode 17 has (a script added in it) is not valid to V8:
 // its record is marked the same way and holds test262's verdict in "test262_valid", and each of its tests
@@ -285,8 +289,14 @@ function harvest() {
           }
         }
       } else if (e.k === "strings") {
+        // The helper asserts that the strings it should match, joined, match, and that those it should not, joined,
+        // do not; it asks of each string alone only when that fails. Each string it should match is one of the
+        // property's or the class's, so it matches alone too, and their join says nothing more. A string it should
+        // not match may still match alone or with others (^\p{RGI_Emoji}+$ matches an emoji followed by a skin
+        // tone, which is two of RGI_Emoji), so those are texts with no answer of test262's.
         e.match.forEach((t) => answer(c, t, mode, true));
-        e.nonMatch.forEach((t) => answer(c, t, mode, false));
+        e.nonMatch.forEach((t) => addText(c, t));
+        if (e.nonMatch.length > 0) answer(c, e.nonMatch.join(""), mode, false);
       }
     }
   }

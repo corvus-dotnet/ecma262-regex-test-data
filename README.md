@@ -1,7 +1,7 @@
 # ECMA-262 regular expression test data
 
 What the V8 JavaScript engine says about 112,701 regular expression patterns. It says which ones are valid, and for
-52,811 of them, whether they match each of a set of texts. There are 5,675,570 texts in all, each with its answers,
+52,811 of them, whether they match each of a set of texts. There are 5,675,685 texts in all, each with its answers,
 as plain JSON Lines. Most of the patterns are written for this data. 8,342 of them, and their texts, are taken from
 test262, the conformance suite of ECMA-262 (see [the files from test262](#the-files-from-test262)).
 
@@ -35,7 +35,7 @@ character is a `\uXXXX` escape, so no tool has to agree about an encoding.
 | `lone-surrogates.jsonl` | 1,500 | 69,000 | The same kind of pattern against 46 texts that hold half of a surrogate pair. The texts are not valid Unicode, which is why they have a file of their own. |
 | `engine-faults.jsonl` | 3,885 | 377,812 | Patterns on which a host engine itself goes wrong, and syntax that host engines have and ECMA-262 has not. 628 of them are not valid. The others are matched against 116 texts. |
 | `unicode-sets.jsonl` | 5,520 | 795,150 | The `v` flag: nested classes, the difference and the intersection of classes, strings in classes and the properties of strings, with the `i` flag and without. Every record is answered with the `v` flag as well as with `u` and with neither, because the three grammars read a class differently. Each is matched against 150 texts. See [the families](#the-families). |
-| `test262.jsonl` | 4,907 | 547,703 | The patterns and texts of test262's regular expression tests, at the commit `manifest.json` names: every pattern a test builds or a syntax test refuses, and every text a test matches one against. A property escape test's text is the whole of a property, and is taken as the two ends of each of its ranges. See [the files from test262](#the-files-from-test262). |
+| `test262.jsonl` | 4,907 | 547,818 | The patterns and texts of test262's regular expression tests, at the commit `manifest.json` names: every pattern a test builds or a syntax test refuses, and every text a test matches one against. A property escape test's text is the whole of a property, and is taken as the two ends of each of its ranges. See [the files from test262](#the-files-from-test262). |
 | `test262-lone-surrogates.jsonl` | 3,435 | 10,326 | The texts and patterns of `test262.jsonl` that hold half of a surrogate pair, as `lone-surrogates.jsonl` holds those of the families. |
 | `captures.jsonl` | 3,100 or so | 90,000 or so | Not `test` but the rest of `RegExp`: where the match is and what each group captured (`exec`), the matches of a global search, the sticky flag, `replace` with every form of `$`, and `split`, for every pattern of `hand-written.jsonl` and `flags.jsonl` and one record in ten of each family. See [captures](#capturesjsonl). |
 | `manifest.json` | | | The versions of Node, V8 and Unicode the data was generated with, the counts of each file, and for the families the limits and how many patterns they dropped. |
@@ -68,7 +68,7 @@ character is a `\uXXXX` escape, so no tool has to agree about an encoding.
 | `tests[].legacy` | The same without the `u` flag. Present when `valid.legacy` is true. |
 | `valid.unicode_sets` | Only in `unicode-sets.jsonl`: whether `new RegExp(pattern, flags + "v")` succeeds. |
 | `tests[].unicode_sets` | Only in `unicode-sets.jsonl`: `RegExp.prototype.test` with the `v` flag. Present when `valid.unicode_sets` is true. |
-| `v8_deviation` | Present and true on 191 records, and on 7,157 tests of `test262.jsonl`, where V8's answers are known to differ from the specification, or to change from run to run. See [where V8 departs from ECMA-262](#where-v8-departs-from-ecma-262). |
+| `v8_deviation` | Present and true on 191 records, and on 7,152 tests of `test262.jsonl`, where V8's answers are known to differ from the specification, or to change from run to run. See [where V8 departs from ECMA-262](#where-v8-departs-from-ecma-262). |
 | `deviation` | On a marked record of the later families and of the files from test262, and on a marked test, the class of the deviation: `unstable`, `surrogate-pair-start`, `modifier-group`, `full-case-folding`, `single-character-string-case`, `ascii-case-folding` or `unicode-version`. An `unstable` record has no `tests`. |
 | `test262` | Only in the files from test262: the test files of test262 the pattern and its texts were taken from, as paths in that repository. |
 | `test262_valid` | Only on a record marked `unicode-version`: test262's verdict where V8's differs, as `{"unicode": true}`. |
@@ -322,26 +322,30 @@ What is taken, and from where:
   code points, written as ranges, more than a million characters. Of each set a record takes the code points listed
   alone and the two ends of each range, each as a text of its own. The set and its complement are both taken, so
   `^\p{Lu}+$` has the ends of the ranges of `Lu` and of everything else.
-- The generated tests of `unicodeSets` give the strings a class must match and must not match. Each is a text.
+- The generated tests of `unicodeSets`, and those of the properties of strings, give the strings a class has and
+  strings it has not. Each is a text, and so is the join of the strings it has not, which is what the test asserts
+  does not match. A string the class has not may still match as several strings it has: `^\p{RGI_Emoji}+$`
+  matches an emoji followed by a skin tone.
 
 Each record names its test files in `test262`, so a failure can be read against the test it came from.
 
 **What test262 says, and V8.** Where test262's harness states an answer (a property escape matches each character
-of its property, a class of the `v` flag matches its strings and not the others), `test262.js` compares it with
-V8's. A pattern a test builds is valid to V8, and the pattern of a negative syntax test is not. They differ in one
+of its property and no other, a class of the `v` flag matches each of its strings and not the join of those it has
+not), `test262.js` compares it with V8's. A pattern a test builds is valid to V8, and the pattern of a negative syntax test is not. They differ in one
 way only. test262 has Unicode 17, and V8 13.6 has Unicode 16:
 
 - A test whose character or string has another property in Unicode 17 is marked `"v8_deviation": true`,
   `"deviation": "unicode-version"`, on the test itself. It keeps V8's answers and holds test262's in
-  `test262_answer`. There are 7,157, for 562 patterns: those of 75 property escape tests, and
-  `^\p{RGI_Emoji}+$` for the strings of `rgi-emoji-17.0.js`.
+  `test262_answer`. There are 7,152, for 562 patterns: those of 71 property escape tests and of the properties of
+  strings `Basic_Emoji`, `RGI_Emoji`, `RGI_Emoji_Modifier_Sequence` and `RGI_Emoji_ZWJ_Sequence`.
 - A pattern of a script that Unicode 17 added (`Beria_Erfe`, `Sidetic`, `Tai_Yo`, `Tolong_Siki`) is not valid to
   V8 with the `u` flag. The eight tests of those scripts are read without compiling their patterns. Its record is marked the same way, and holds test262's verdict in `test262_valid` and
   test262's answer in each test's `test262_answer`. There are 64, and they have copies in
   `test262-lone-surrogates.jsonl`.
 
-An engine with Unicode 16 skips the marked tests and records, as with every deviation. An engine with Unicode 17
-can be judged on them by `test262_answer` and `test262_valid` instead.
+An engine with Unicode 16 skips the marked tests and records, as with every deviation. An engine with Unicode 17 is
+judged on them by `test262_answer` and `test262_valid` instead (see [how a runner judges an
+engine](#how-a-runner-judges-an-engine)).
 
 The later families' search for deviations (`deviations.js`) was run on these records too. It found one record whose
 answers change from run to run, `a|(?-i:b|(?i:c)|d|(?-i:e)|f)|g|(?i:h)|k` with the `i` flag, which is marked
@@ -427,7 +431,13 @@ Engines are compared by the share of the data they answer as V8 does, so every r
 counts them the same way. A runner that departs from this says so beside its figures.
 
 - **What is skipped.** A test marked `v8_deviation`, and a record marked as one of V8's departures (section "Where
-  V8 departs from ECMA-262"). Nothing else.
+  V8 departs from ECMA-262"). Nothing else, but for the Unicode version below.
+- **The Unicode version.** A record or a test marked `unicode-version` (in the files from test262) is where V8 has
+  the Unicode of 16 and test262 that of 17. A runner whose engine has Unicode 17 judges it by test262: a marked
+  record in each grammar its `test262_valid` names, by that verdict, and its tests by their `test262_answer` in that
+  grammar; a marked test, or a test of a marked record, in each grammar its `test262_answer` names, by that answer.
+  A grammar test262 gives nothing for is skipped. A runner whose engine has another Unicode skips them, as it skips
+  every other deviation, and says so beside its figures.
 - **The grammars.** Each record is asked about under every grammar V8 judged it in: `unicode` (the record's flags
   with `u`), `legacy` (its flags alone) and, where the record has it, `unicode_sets` (with `v`).
 - **Validity.** Under a grammar V8 found valid, an engine that refuses the pattern scores one *refused*; under a
@@ -451,7 +461,7 @@ counts them the same way. A runner that departs from this says so beside its fig
 
 - **It records one implementation.** The answers are V8's (13.6, in Node 24.11.0), not the specification's. For the
   great majority of patterns they are the same thing.
-- **Known deviations.** V8 13.6 departs from ECMA-262 in seven known ways, on 191 records and 7,157 tests. Those
+- **Known deviations.** V8 13.6 departs from ECMA-262 in seven known ways, on 191 records and 7,152 tests. Those
   records and tests have `"v8_deviation": true`. See the next section.
 - **Unicode 16.** V8 13.6 has the Unicode 16.0 character database. An engine with a later version will differ on
   characters assigned since, in `\p{...}` and in case folding. The files from test262 mark those of their tests,
@@ -476,7 +486,7 @@ record or test are still V8's. They should not be taken as the specification's.
 | `full-case-folding` | 6 in `case-folding.jsonl` | With the `i` and `u` flags a backreference is compared with the text by full case folding of the whole string. ECMA-262 compares one character at a time through Canonicalize, which is simple case folding. | `^(..)\1$` with `iu` matches the four characters sharp s, `S`, `s`, capital sharp s. `^(.)(.)\1\2$` does not. |
 | `single-character-string-case` | 136 in `unicode-sets.jsonl` | With the `i` and `v` flags a string of one character in `\q{...}` is not canonicalized against the text: `[\q{k}]` does not match `K`, where `[k]` does. ECMA-262 makes such a string a character of the class. | `^(?i:[\q{k}])$` |
 | `ascii-case-folding` | 24 in `unicode-sets.jsonl` | With the `i` and `v` flags `\p{ASCII}` is folded without the long s and the Kelvin sign, which fold to `s` and `k`, where the same range written out, `[\u0000-\u007f]`, is folded with them. ECMA-262 folds the two alike. | `[\p{ASCII}]` with `i` on the long s |
-| `unicode-version` | 64 records and 7,157 tests in `test262.jsonl`, 64 records in `test262-lone-surrogates.jsonl` | V8 13.6 has the character database of Unicode 16, and test262 that of Unicode 17. A property is answered for a character as Unicode 16 has it, and a script that Unicode 17 added is not a property name. The marked tests hold test262's answer in `test262_answer`, and the marked records test262's verdict in `test262_valid`. | `^\p{Cased}+$` with the `u` flag on U+0295, which Unicode 17 makes cased. V8 says no, test262 yes. |
+| `unicode-version` | 64 records and 7,152 tests in `test262.jsonl`, 64 records in `test262-lone-surrogates.jsonl` | V8 13.6 has the character database of Unicode 16, and test262 that of Unicode 17. A property is answered for a character as Unicode 16 has it, and a script that Unicode 17 added is not a property name. The marked tests hold test262's answer in `test262_answer`, and the marked records test262's verdict in `test262_valid`. | `^\p{Cased}+$` with the `u` flag on U+0295, which Unicode 17 makes cased. V8 says no, test262 yes. |
 
 The six marked records of `hand-written.jsonl` have no `deviation` field. One of them, `(?i:\Bs)`, is unstable as
 well, and so is `(?i:\bk\b)` in the same file, which is not marked. `flags.jsonl` covers what the modifier groups
