@@ -18,7 +18,8 @@
 // there is nothing of it to compare but its validity.
 //
 // It also checks the marks themselves: that a marked record of the later families names its class, that an unstable
-// one has no tests, and that manifest.json counts each class as the file has it.
+// one has no tests, and that manifest.json counts each class as the file has it, counting a test marked on its own
+// (in the files from test262) as one of its class.
 'use strict';
 
 const fs = require("fs");
@@ -151,6 +152,11 @@ function check(dir, name) {
     for (const t of r.tests) {
       count.tests++;
       if (typeof t.text !== "string") { disagree(`${what} has a test with no text`); continue; }
+      // A test of its own may be marked (test262.jsonl): it keeps V8's answers, and those are checked as any other.
+      if ("deviation" in t) {
+        if (t.v8_deviation !== true || typeof t.deviation !== "string") disagree(`${what} on ${JSON.stringify(t.text)} has a mark of the wrong shape`);
+        deviations[t.deviation] = (deviations[t.deviation] || 0) + 1;
+      }
       for (const [mode, regex, valid] of modes) {
         if (mode in t !== valid) { disagree(`${what} on ${JSON.stringify(t.text)}: ${mode} answer`); continue; }
         if (!valid || !regex) continue;

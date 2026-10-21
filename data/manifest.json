@@ -182,6 +182,46 @@
       },
       "node": "v24.22.0",
       "v8": "13.6.233.17-node.57"
+    },
+    {
+      "file": "test262.jsonl",
+      "patterns": 4907,
+      "valid_unicode": 3925,
+      "valid_legacy_only": 744,
+      "not_valid": 213,
+      "tests": 547703,
+      "valid_unicode_sets": 4012,
+      "valid_unicode_sets_only": 25,
+      "v8_deviations": {
+        "unicode-version": 7221,
+        "unstable": 1
+      },
+      "candidates": 4907,
+      "dropped_for_backtracks": 0,
+      "dropped_for_time": 0,
+      "test262": {
+        "repository": "https://github.com/tc39/test262",
+        "commit": "d53ebc8b1931d9f1541e43d59650776e4b766248",
+        "files_read": 2520
+      }
+    },
+    {
+      "file": "test262-lone-surrogates.jsonl",
+      "patterns": 3435,
+      "valid_unicode": 3370,
+      "valid_legacy_only": 64,
+      "not_valid": 1,
+      "tests": 10326,
+      "valid_unicode_sets": 3370,
+      "valid_unicode_sets_only": 0,
+      "v8_deviations": {
+        "unicode-version": 64
+      },
+      "test262": {
+        "repository": "https://github.com/tc39/test262",
+        "commit": "d53ebc8b1931d9f1541e43d59650776e4b766248",
+        "files_read": 2520
+      }
     }
   ]
 }
