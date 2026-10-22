@@ -430,11 +430,12 @@ const limits = { backtracks: 250000, limitMs: 250, threads: 4 };
     if (process.env.TIMES) console.error(`${family.source}: slowest kept ${slowestKeptMs.toFixed(1)} ms`);
   }
 
-  // captures.jsonl is written by generate-captures.js, which puts its own entry in the manifest: that entry is kept.
+  // captures.jsonl is written by generate-captures.js, and the two files of test262 by test262.js, which put their
+  // own entries in the manifest: those entries are kept.
   const manifestPath = path.join(out, "manifest.json");
   if (fs.existsSync(manifestPath)) {
-    const captures = JSON.parse(fs.readFileSync(manifestPath, "utf8")).files.find((f) => f.file === "captures.jsonl");
-    if (captures) files.push(captures);
+    const kept = ["captures.jsonl", "test262.jsonl", "test262-lone-surrogates.jsonl"];
+    files.push(...JSON.parse(fs.readFileSync(manifestPath, "utf8")).files.filter((f) => kept.includes(f.file)));
   }
   fs.writeFileSync(manifestPath, JSON.stringify({
     node: process.version, v8: process.versions.v8, unicode: process.versions.unicode,
