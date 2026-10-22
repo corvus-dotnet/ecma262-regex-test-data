@@ -1,0 +1,31 @@
+# The check of a pull request and of main, which the ruleset of main requires: verify.js asks V8 again about every
+# record of every file, with the Node that wrote the data (manifest.json names it), and checks the counts and the
+# marks. It reports no disagreement when the data is V8's.
+name: verify
+
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify the data
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '24.22.0'
+    - name: The Node that wrote the data
+      run: |
+        node=$(python3 -c "import json; print(json.load(open('data/manifest.json'))['node'])")
+        echo "manifest.json: $node, this: $(node --version)"
+        [ "$node" = "$(node --version)" ]
+    - name: Verify every file
+      run: node verify.js
