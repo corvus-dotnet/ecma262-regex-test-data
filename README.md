@@ -1,8 +1,9 @@
 # ECMA-262 regular expression test data
 
-What the V8 JavaScript engine says about 104,359 regular expression patterns. It says which ones are valid, and for
-45,420 of them, whether they match each of a set of texts. There are 5,117,541 texts in all, each with its answers,
-as plain JSON Lines.
+What the V8 JavaScript engine says about 112,701 regular expression patterns. It says which ones are valid, and for
+52,819 of them, whether they match each of a set of texts. There are 5,677,081 texts in all, each with its answers,
+as plain JSON Lines. Most of the patterns are written for this data. 8,342 of them, and their texts, are taken from
+test262, the conformance suite of ECMA-262 (see [the files from test262](#the-files-from-test262)).
 
 It is for testing a regular expression engine, or a translation from ECMAScript syntax to another engine's, against a
 real implementation of ECMA-262. JSON Schema is one reason to need that: its `pattern` and `patternProperties`
@@ -29,11 +30,13 @@ character is a `\uXXXX` escape, so no tool has to agree about an encoding.
 | `word-boundaries.jsonl` | 2,000 | 542,000 | `\b` and `\B` at every place in short patterns. Each is matched against 271 texts, which include every text of up to three characters over a six-character alphabet. |
 | `backreferences.jsonl` | 3,871 | 514,843 | Backreferences to groups of repetitions, of alternatives and of optional groups, to groups that are never set, and from inside the group. Each is matched against 133 texts. |
 | `lookarounds.jsonl` | 4,499 | 590,167 | Groups that a lookahead or a lookbehind sets, read outside it or in the same repetition. Each is matched against about 130 texts, which include every text of up to four characters over its alphabet. |
-| `case-folding.jsonl` | 2,863 | 407,080 | Case-insensitive literals, classes and backreferences, with the `i` flag and in `(?i:` groups, against the characters whose case pairs host engines get wrong. The number of texts depends on the pattern. |
+| `case-folding.jsonl` | 2,863 | 408,326 | Case-insensitive literals, classes and backreferences, with the `i` flag and in `(?i:` groups, against the characters whose case pairs host engines get wrong. The number of texts depends on the pattern. |
 | `code-units.jsonl` | 3,000 | 296,940 | Patterns that are valid only without the `u` flag, and so are matched by UTF-16 code unit, against texts with characters beyond the Basic Multilingual Plane. Each is matched against 105 texts. |
 | `lone-surrogates.jsonl` | 1,500 | 69,000 | The same kind of pattern against 46 texts that hold half of a surrogate pair. The texts are not valid Unicode, which is why they have a file of their own. |
 | `engine-faults.jsonl` | 3,885 | 377,812 | Patterns on which a host engine itself goes wrong, and syntax that host engines have and ECMA-262 has not. 628 of them are not valid. The others are matched against 116 texts. |
-| `unicode-sets.jsonl` | 5,520 | 795,150 | The `v` flag: nested classes, the difference and the intersection of classes, strings in classes and the properties of strings, with the `i` flag and without. Every record is answered with the `v` flag as well as with `u` and with neither, because the three grammars read a class differently. Each is matched against 150 texts. See [the families](#the-families). |
+| `unicode-sets.jsonl` | 5,520 | 795,300 | The `v` flag: nested classes, the difference and the intersection of classes, strings in classes and the properties of strings, with the `i` flag and without. Every record is answered with the `v` flag as well as with `u` and with neither, because the three grammars read a class differently. Each is matched against 150 texts. See [the families](#the-families). |
+| `test262.jsonl` | 4,907 | 547,818 | The patterns and texts of test262's regular expression tests, at the commit `manifest.json` names: every pattern a test builds or a syntax test refuses, and every text a test matches one against. A property escape test's text is the whole of a property, and is taken as the two ends of each of its ranges. See [the files from test262](#the-files-from-test262). |
+| `test262-lone-surrogates.jsonl` | 3,435 | 10,326 | The texts and patterns of `test262.jsonl` that hold half of a surrogate pair, as `lone-surrogates.jsonl` holds those of the families. |
 | `captures.jsonl` | 3,100 or so | 90,000 or so | Not `test` but the rest of `RegExp`: where the match is and what each group captured (`exec`), the matches of a global search, the sticky flag, `replace` with every form of `$`, and `split`, for every pattern of `hand-written.jsonl` and `flags.jsonl` and one record in ten of each family. See [captures](#capturesjsonl). |
 | `manifest.json` | | | The versions of Node, V8 and Unicode the data was generated with, the counts of each file, and for the families the limits and how many patterns they dropped. |
 
@@ -65,8 +68,9 @@ character is a `\uXXXX` escape, so no tool has to agree about an encoding.
 | `tests[].legacy` | The same without the `u` flag. Present when `valid.legacy` is true. |
 | `valid.unicode_sets` | Only in `unicode-sets.jsonl`: whether `new RegExp(pattern, flags + "v")` succeeds. |
 | `tests[].unicode_sets` | Only in `unicode-sets.jsonl`: `RegExp.prototype.test` with the `v` flag. Present when `valid.unicode_sets` is true. |
-| `v8_deviation` | Present and true on 62 records where V8's answers are known to differ from the specification, or to change from run to run. See [where V8 departs from ECMA-262](#where-v8-departs-from-ecma-262). |
-| `deviation` | On a marked record of the later families, the class of the deviation: `unstable`, `surrogate-pair-start`, `modifier-group` or `full-case-folding`. An `unstable` record has no `tests`. |
+| `v8_deviation` | Present and true on 231 records where V8's answers are known to differ from the specification, or to change from run to run. See [where V8 departs from ECMA-262](#where-v8-departs-from-ecma-262). |
+| `deviation` | On a marked record of the later families and of the files from test262, the class of the deviation: `unstable`, `surrogate-pair-start`, `modifier-group`, `full-case-folding`, `single-character-string-case` or `ascii-case-folding`. An `unstable` record has no `tests`. |
+| `test262` | Only in the files from test262: the test files of test262 the pattern and its texts were taken from, as paths in that repository. |
 
 The two modes can give different answers for one text. Without the `u` flag V8 matches UTF-16 code units, so a
 character beyond the Basic Multilingual Plane is two units to `.`, a class or a quantifier. With it, V8 matches code
@@ -74,7 +78,8 @@ points.
 
 ## The families
 
-The first three files test a regular expression engine broadly. The eleven families are narrower. Each was built
+The first three files test a regular expression engine broadly. The eleven families are narrower, and the two files
+from test262 come last. Each was built
 around a class of fault that the files before it did not reach, found by testing JSON Schema implementations against
 V8, or, for the last, around a part of the language the files before it did not hold. A family starts from the
 patterns that found the fault, which are written by hand, and a small grammar builds the rest around them. The
@@ -294,6 +299,54 @@ flag it is a class of `[`, the letters, `-`, `]` and the vowels, which does matc
 
 `captures.jsonl` was written before this family and has none of its records.
 
+### The files from test262
+
+[test262](https://github.com/tc39/test262) is the conformance suite of ECMA-262, written to the text of the
+specification and run by every JavaScript engine. `test262.js` takes from it the patterns and the texts of its tests
+of regular expressions, in `built-ins/RegExp`, `annexB/built-ins/RegExp`, `language/literals/regexp` and the
+`String.prototype` methods that take a regular expression. The answers are V8's, made as the families' are: each
+pattern is compiled with the `u` flag, with the `v` flag and with neither, within the same limits, and each text
+matched in each mode that is valid. So every record has all three verdicts, as in `unicode-sets.jsonl`.
+
+What is taken, and from where:
+
+- Every test is run in a context of its own with `RegExp.prototype.exec` and the `RegExp` constructor watched. Every
+  pattern a test builds is a record, with the flags `i`, `m` and `s` it was built with, and every text the test
+  matches it against (by `test`, `exec`, `match`, `replace`, `search` or `split`) is one of its tests, whatever the
+  other flags and `lastIndex` were. A test asks the question of the record: does the pattern match anywhere in the
+  text.
+- The pattern of each negative syntax test, which is a regular expression literal that V8 must refuse.
+- The generated tests of `property-escapes` and of `CharacterClassEscapes` give a text that is the whole of a set of
+  code points, written as ranges, more than a million characters. Of each set a record takes the code points listed
+  alone and the two ends of each range, each as a text of its own. The set and its complement are both taken, so
+  `^\p{Lu}+$` has the ends of the ranges of `Lu` and of everything else.
+- The generated tests of `unicodeSets`, and those of the properties of strings, give the strings a class has and
+  strings it has not. Each is a text, and so is the join of the strings it has not, which is what the test asserts
+  does not match. A string the class has not may still match as several strings it has: `^\p{RGI_Emoji}+$`
+  matches an emoji followed by a skin tone.
+
+Each record names its test files in `test262`, so a failure can be read against the test it came from.
+
+**What test262 says, and V8.** Where test262's harness states an answer (a property escape matches each character
+of its property and no other, a class of the `v` flag matches each of its strings and not the join of those it has
+not), `test262.js` compares it with V8's, and a pattern a test builds must be valid to V8, and the pattern of a
+negative syntax test not. Any difference stops the run. They agree everywhere: test262 has the character database
+of Unicode 17, and so has V8 13.6.233.17 in Node 24.22.0, which wrote these files. (With Node 24.11.0, whose V8 has
+Unicode 16, they differed on 7,216 answers: the characters and strings Unicode 17 changed, and the four scripts it
+added, `Beria_Erfe`, `Sidetic`, `Tai_Yo` and `Tolong_Siki`.)
+
+The later families' search for deviations (`deviations.js`) was run on these records too. It found one record whose
+answers change from run to run, `a|(?-i:b|(?i:c)|d|(?-i:e)|f)|g|(?i:h)|k` with the `i` flag, which is marked
+`unstable` and has no tests. The matcher of `reference.js` gave V8's answer for all 1,106,279 answers it was asked
+for. It did not read the syntax 6 times, counting a pattern once for each grammar.
+
+What it does not take. A test that is a JavaScript module (none of these directories has one). A test's pattern
+with a flag that is not valid, or a negative test whose error is in the grammar of literals and not of patterns,
+such as a line terminator before the closing `/`. A text that is not a string. And, of the property and class
+escape sets, the code points inside a range, which are of the same property as its ends.
+
+The patterns and texts are test262's and are used under its licence. See [NOTICE-test262.md](NOTICE-test262.md).
+
 ### `captures.jsonl`
 
 For a regular expression library rather than a JSON Schema implementation: what the members built on captures
@@ -388,13 +441,14 @@ counts them the same way. A runner that departs from this says so beside its fig
 
 ## What to know before relying on it
 
-- **It records one implementation.** The answers are V8's (13.6, in Node 24.11.0), not the specification's. For the
+- **It records one implementation.** The answers are V8's (13.6.233.17, in Node 24.22.0), not the specification's. For the
   great majority of patterns they are the same thing.
-- **Known deviations.** V8 13.6 departs from ECMA-262 in four known ways, on 62 records. Those records have
+- **Known deviations.** V8 13.6 departs from ECMA-262 in six known ways, on 231 records. Those records have
   `"v8_deviation": true`. See the next section.
-- **Unicode 16.** V8 13.6 has the Unicode 16.0 character database. An engine with a later version will differ on
-  characters assigned since, in `\p{...}` and in case folding.
-- **No `v` flag.** Set notation and properties of strings are not covered.
+- **Unicode 17.** V8 13.6.233.17 has the Unicode 17.0 character database, as test262 has. An engine with another
+  version will differ on the characters whose properties differ, in `\p{...}` and in case folding.
+- **No `v` flag in the first files.** Set notation and properties of strings are covered by `unicode-sets.jsonl`
+  and the files from test262 only.
 - **Whole-text answers only.** A test says whether the pattern matches anywhere in the text. It does not record
   where, or what the groups captured.
 
@@ -406,8 +460,8 @@ names the class. The answers of a marked record are still V8's. They should not 
 
 | Class | Records | What V8 does | Smallest example |
 |---|---|---|---|
-| `modifier-group` | 6 in `hand-written.jsonl`, 20 in `case-folding.jsonl` | A case-insensitive modifier group is answered differently from the same pattern with the `i` flag, which ECMA-262 does not allow. | `^(?i:\u212a)$` with the `u` flag does not match `k`. `^\u212a$` with `iu` does. |
-| `unstable` | 25 in `case-folding.jsonl`, 14 in `unicode-sets.jsonl` | The answer depends on how V8 compiled the pattern, and so changes from one run to the next. All 39 have a case-insensitive modifier group, and the 14 a class with strings in it. The records have no `tests`. | `(?i:\Bs)` with the `u` flag on `s` and a long s (U+017F). False at first, true once V8 has switched its optimising compiler off. |
+| `modifier-group` | 6 in `hand-written.jsonl`, 22 in `case-folding.jsonl` | A case-insensitive modifier group is answered differently from the same pattern with the `i` flag, which ECMA-262 does not allow. | `^(?i:\u212a)$` with the `u` flag does not match `k`. `^\u212a$` with `iu` does. |
+| `unstable` | 18 in `case-folding.jsonl`, 13 in `unicode-sets.jsonl`, 1 in `test262.jsonl` | The answer depends on how V8 compiled the pattern, and so changes from one run to the next. All 32 have a case-insensitive modifier group, and the 13 of `unicode-sets.jsonl` a class with strings in it. The records have no `tests`. | `(?i:\Bs)` with the `u` flag on `s` and a long s (U+017F). False at first, true once V8 has switched its optimising compiler off. |
 | `surrogate-pair-start` | 2 in `code-units.jsonl`, 2 in `lone-surrogates.jsonl`, 1 in `case-folding.jsonl` | With the `u` flag a match starts between the two halves of a surrogate pair. ECMA-262 moves from one start to the next a code point at a time. | `/(?<!^.*)/u.exec("\u{10428}")` has index 1. So has `/\B/u.exec("a\u{10428}a")`, at index 2. Both should be null. |
 | `full-case-folding` | 6 in `case-folding.jsonl` | With the `i` and `u` flags a backreference is compared with the text by full case folding of the whole string. ECMA-262 compares one character at a time through Canonicalize, which is simple case folding. | `^(..)\1$` with `iu` matches the four characters sharp s, `S`, `s`, capital sharp s. `^(.)(.)\1\2$` does not. |
 | `single-character-string-case` | 136 in `unicode-sets.jsonl` | With the `i` and `v` flags a string of one character in `\q{...}` is not canonicalized against the text: `[\q{k}]` does not match `K`, where `[k]` does. ECMA-262 makes such a string a character of the class. | `^(?i:[\q{k}])$` |
@@ -453,8 +507,8 @@ node verify.js
 
 `verify.js` does not use the generator. It reads every record of every file, compiles the pattern again, matches
 every text again, and compares V8's answers with the recorded ones. It prints the patterns, tests and answers of
-each file, and checks the counts in `manifest.json` and the marks of the deviations. With Node 24.11.0 it reports no
-disagreements in 9,665,147 answers. With another Node, a disagreement is a place where its V8 differs. It checks
+each file, and checks the counts in `manifest.json` and the marks of the deviations. With Node 24.22.0 it reports no
+disagreements in 11,333,152 answers. With another Node, a disagreement is a place where its V8 differs. It checks
 each file in a process of its own, because V8's answers for two of the hand-written patterns that it gets wrong
 (`(?i:\Bs)` and `(?i:\bk\b)`) change in a process that has compiled a great many patterns.
 
@@ -470,7 +524,9 @@ pattern that took it too long.
 node generate.js
 ```
 
-This needs Node 24 or later (for the ECMAScript 2025 syntax) and rewrites `data/`. The patterns and texts come from
+This needs Node 24.22.0, the Node that wrote the data (a later V8 may answer otherwise, and V8 has had Unicode 17 since
+that release), and rewrites `data/`, all but the files that the two
+scripts below write, whose entries in `manifest.json` it keeps. The patterns and texts come from
 fixed lists and generators with fixed seeds, in `generate.js` for the first three files and in `families.js`,
 `more-families.js` and `unicode-sets.js` for the families. Each family has a seed of its own. A run with the same Node gives the same
 files, and a run with a newer one shows what changed in V8. `timed.js` asks V8 about the families within the two
@@ -478,6 +534,20 @@ limits. It uses four worker threads. `deviations.js` then marks the records of t
 known to be wrong, with `reference.js` beside it. It starts other Node processes to do so. A run takes about half a
 minute.
 
+The two files from test262 are written by `test262.js`, from a checkout of test262 at the commit that
+`manifest.json` names in their entries:
+
+```sh
+git clone https://github.com/tc39/test262
+git -C test262 checkout d53ebc8b1931d9f1541e43d59650776e4b766248
+node test262.js test262
+```
+
+It rewrites those two files, their entries in `manifest.json` and `NOTICE-test262.md`, and takes about a minute. A
+checkout of a later commit takes in what test262 has added.
+
 ## Licence
 
-MIT. See [LICENSE](LICENSE).
+MIT, except for the patterns and texts taken from test262, which are in `test262.jsonl` and
+`test262-lone-surrogates.jsonl` and are under test262's licence (BSD). See [LICENSE](LICENSE) and
+[NOTICE-test262.md](NOTICE-test262.md).
