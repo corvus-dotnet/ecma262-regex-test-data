@@ -31,3 +31,5 @@ jobs:
       run: node verify.js
     - name: The overlays for other versions of Unicode fit the data
       run: node unicode.js check
+    - name: The specification's answers where V8 departs fit the data
+      run: node spec-answers.js check

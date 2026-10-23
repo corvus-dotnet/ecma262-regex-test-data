@@ -255,5 +255,11 @@
       "validities": 0,
       "made_with": "the Corvus.Regex.Ecma262 data-set runner (--answers) built with Unicode 18.0.0 tables from regress's gen-unicode; checked against SRELL 2026.07"
     }
-  ]
+  ],
+  "spec_answers": {
+    "file": "spec/answers.jsonl",
+    "answers": 660,
+    "held": 31,
+    "made_with": "the Corvus.Regex.Ecma262 data-set runner (--answers) where QuickJS-ng 0.17, SRELL 2026.07 and regress 0.12 were asked too, checked against engine262 (main at d553e7b, with engine262#378 fixed) and the text of ECMA-262; 31 answers that depend on tc39/ecma262#4006 are held"
+  }
 }
