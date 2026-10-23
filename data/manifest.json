@@ -225,6 +225,14 @@
         "commit": "d53ebc8b1931d9f1541e43d59650776e4b766248",
         "files_read": 2520
       }
+    },
+    {
+      "file": "ill-formed-utf8.jsonl",
+      "patterns": 8,
+      "valid_unicode": 8,
+      "valid_legacy_only": 0,
+      "not_valid": 0,
+      "tests": 1440
     }
   ]
 }

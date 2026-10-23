@@ -17,6 +17,9 @@
 // In the later families a record that does change is marked "unstable" and has no tests (see deviations.js), so
 // there is nothing of it to compare but its validity.
 //
+// In ill-formed-utf8.jsonl, whose texts are bytes that are not UTF-8 and have no answer of V8's, it checks that each
+// test's bytes are not UTF-8 and that each pattern's validity is V8's.
+//
 // It also checks the marks themselves: that a marked record of the later families names its class, that an unstable
 // one has no tests, and that manifest.json counts each class as the file has it.
 'use strict';
@@ -146,6 +149,24 @@ function check(dir, name) {
 
     if (!r.tests) continue;
     if (!r.valid.unicode && !r.valid.legacy && !r.valid.unicode_sets) disagree(`${what} is not valid and has tests`);
+    if (name === "ill-formed-utf8.jsonl") {
+      // Bytes that are not UTF-8, which the rule's answer is to refuse: each test is one answer under each grammar
+      // the pattern is valid in, and has none of V8's.
+      for (const t of r.tests) {
+        count.tests++;
+        const keys = Object.keys(t).sort().join(",");
+        if (keys !== "bytes,case" || typeof t.bytes !== "string" || !/^([0-9a-f]{2})+$/.test(t.bytes)
+          || typeof t.case !== "string") {
+          disagree(`${what} has a test of the wrong shape: ${JSON.stringify(t)}`);
+          continue;
+        }
+        let wellFormed = true;
+        try { new TextDecoder("utf-8", { fatal: true }).decode(Buffer.from(t.bytes, "hex")); } catch { wellFormed = false; }
+        if (wellFormed) disagree(`${what} on ${t.bytes}: the bytes are UTF-8`);
+        answers += (r.valid.unicode ? 1 : 0) + (r.valid.legacy ? 1 : 0);
+      }
+      continue;
+    }
     const modes = [["unicode", unicode, r.valid.unicode], ["legacy", legacy, r.valid.legacy]];
     if (sets) modes.push(["unicode_sets", unicodeSets, r.valid.unicode_sets]);
     for (const t of r.tests) {
