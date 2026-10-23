@@ -492,11 +492,13 @@ function wordBoundaries() {
 }
 
 // The four families above, then those of more-families.js, which were written later and are built with the same
-// pieces.
+// pieces, then the v flag's and the searches for where a match starts.
 function families() {
   const { moreFamilies } = require("./more-families");
   const { unicodeSets } = require("./unicode-sets");
-  return [anchoredLists(), emptyLoops(), lineTerminators(), wordBoundaries(), ...moreFamilies(), unicodeSets()];
+  const { startSearches } = require("./start-searches");
+  return [anchoredLists(), emptyLoops(), lineTerminators(), wordBoundaries(), ...moreFamilies(), unicodeSets(),
+    startSearches()];
 }
 
 module.exports = { families, rng, pick, chance, unique, exhaustive, withRandomTexts, assemble };

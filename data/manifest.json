@@ -173,9 +173,21 @@
       }
     },
     {
+      "file": "start-searches.jsonl",
+      "patterns": 2000,
+      "valid_unicode": 2000,
+      "valid_legacy_only": 0,
+      "not_valid": 0,
+      "tests": 72001,
+      "candidates": 2000,
+      "dropped_for_backtracks": 0,
+      "dropped_for_time": 0,
+      "v8_deviations": {}
+    },
+    {
       "file": "captures.jsonl",
-      "patterns": 5188,
-      "tests": 207485,
+      "patterns": 8378,
+      "tests": 306177,
       "v8_deviations": {
         "surrogate-pair-start": 16,
         "unstable": 1

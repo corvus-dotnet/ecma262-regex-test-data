@@ -1,7 +1,7 @@
 # ECMA-262 regular expression test data
 
-What the V8 JavaScript engine says about 112,701 regular expression patterns. It says which ones are valid, and for
-52,819 of them, whether they match each of a set of texts. There are 5,677,081 texts in all, each with its answers,
+What the V8 JavaScript engine says about 114,701 regular expression patterns. It says which ones are valid, and for
+54,819 of them, whether they match each of a set of texts. There are 5,749,082 texts in all, each with its answers,
 as plain JSON Lines. Most of the patterns are written for this data. 8,342 of them, and their texts, are taken from
 test262, the conformance suite of ECMA-262 (see [the files from test262](#the-files-from-test262)). One more file
 holds 1,440 texts of bytes that are not UTF-8, for an engine that takes UTF-8, whose answer is that the engine refuses
@@ -39,7 +39,8 @@ character is a `\uXXXX` escape, so no tool has to agree about an encoding.
 | `unicode-sets.jsonl` | 5,520 | 795,300 | The `v` flag: nested classes, the difference and the intersection of classes, strings in classes and the properties of strings, with the `i` flag and without. Every record is answered with the `v` flag as well as with `u` and with neither, because the three grammars read a class differently. Each is matched against 150 texts. See [the families](#the-families). |
 | `test262.jsonl` | 4,907 | 547,818 | The patterns and texts of test262's regular expression tests, at the commit `manifest.json` names: every pattern a test builds or a syntax test refuses, and every text a test matches one against. A property escape test's text is the whole of a property, and is taken as the two ends of each of its ranges. See [the files from test262](#the-files-from-test262). |
 | `test262-lone-surrogates.jsonl` | 3,435 | 10,326 | The texts and patterns of `test262.jsonl` that hold half of a surrogate pair, as `lone-surrogates.jsonl` holds those of the families. |
-| `captures.jsonl` | 3,100 or so | 90,000 or so | Not `test` but the rest of `RegExp`: where the match is and what each group captured (`exec`), the matches of a global search, the sticky flag, `replace` with every form of `$`, and `split`, for every pattern of `hand-written.jsonl` and `flags.jsonl` and one record in ten of each family. See [captures](#capturesjsonl). |
+| `start-searches.jsonl` | 2,000 | 72,001 | Patterns made of what an engine's search for where a match can start reasons about (an assertion before one to three loops, then a literal or an alternation), each with texts of its own built from its literal, its sets and characters of every width, in the shapes that ask where a match starts. See [start searches](#start-searchesjsonl). |
+| `captures.jsonl` | 8,378 | 306,177 | Not `test` but the rest of `RegExp`: where the match is and what each group captured (`exec`), the matches of a global search, the sticky flag, `replace` with every form of `$`, and `split`, for every pattern of `hand-written.jsonl`, `flags.jsonl` and `start-searches.jsonl` and one record in ten of each other file. See [captures](#capturesjsonl). |
 | `ill-formed-utf8.jsonl` | 8 | 1,440 | Bytes that are not UTF-8, each of the ill-formed sequences of Unicode's Table 3-7 in six places in a text, for an engine's UTF-8 interface, which must refuse them. A test is its bytes in hexadecimal. It has no answer of V8's. See [ill-formed UTF-8](#ill-formed-utf8jsonl). |
 | `manifest.json` | | | The versions of Node, V8 and Unicode the data was generated with, the counts of each file, and for the families the limits and how many patterns they dropped. |
 
@@ -301,7 +302,7 @@ strings name, and 60 others.
 Example. `^[[a-z]--[aeiou]]$` does not match `a` with the `v` flag. With `u` it is a syntax error, and without a
 flag it is a class of `[`, the letters, `-`, `]` and the vowels, which does match `a`.
 
-`captures.jsonl` was written before this family and has none of its records.
+`captures.jsonl` has one record in ten of this family, as of the others.
 
 ### The files from test262
 
@@ -351,11 +352,40 @@ escape sets, the code points inside a range, which are of the same property as i
 
 The patterns and texts are test262's and are used under its licence. See [NOTICE-test262.md](NOTICE-test262.md).
 
+### `start-searches.jsonl`
+
+For an engine that does not try every start of a match. Such an engine looks for something every match must hold (a
+literal after a run of loops, a literal inside, one of several alternatives) and works out from where it is found
+which starts could reach it. This family is made of the pieces such a search reasons about, so that a start it steps
+past is a wrong answer here:
+
+- an assertion before the loops, or none: `\b`, `\B`, `^` or `$`;
+- one to three loops, unbounded or bounded, over sets that hold or do not hold the literal, word characters and
+  others, line terminators and characters beyond the Basic Multilingual Plane;
+- a literal, an alternation of two, or a literal before the loops as well as after them;
+- then what may follow: an assertion, a loop, an alternation or nothing.
+
+Each pattern has about 36 texts of its own. Some are in the shapes that ask where a match starts: a separator, the
+literal, a run of the loops' sets and the literal again (`\b\w+n\b` over `a nation`, where the first `n` begins the
+run before the second); the literal at the start of the text; the literal doubled. The rest are random runs of the
+literal, members of the sets, separators and characters of every width: two- and three-byte UTF-8, surrogate pairs,
+combining sequences, the long s and the Kelvin sign that case folding joins to ASCII, and lone surrogates. A match
+without `u` can start between the halves of a pair, which over UTF-8 is the third byte of the four. Every record is
+also in `captures.jsonl`, whose answers say where each match is, which a `test` answer alone does not.
+
+The family was written when the Corvus .NET engine was found to step past starts in three ways that 26.9 million
+answers of the other files did not show: an occurrence of the literal with no run before it that begins the run before
+a later one, a later start of a run that passes an assertion the first failed (`\B\w+n` over `xan`), and a window back
+from a bounded loop counted in characters where the text is in bytes or code units. Its seeds are those shapes.
+`start-searches.js` writes it with a fixed seed. `fuzz.js` builds it with any other seed as a fuzzer (see
+[regenerating it](#regenerating-it)).
+
 ### `captures.jsonl`
 
 For a regular expression library rather than a JSON Schema implementation: what the members built on captures
 give. Each record has the pattern, flags and validity of a record of another file (its `from` says which), with up
-to 40 of that record's texts. Each test holds, under `unicode` and under `legacy` for each grammar the pattern is
+to 40 of that record's texts: every record of `hand-written.jsonl`, `flags.jsonl` and `start-searches.jsonl`, and one
+in ten of each other file but `ill-formed-utf8.jsonl`, which has no texts. Each test holds, under `unicode` and under `legacy` for each grammar the pattern is
 valid in, an object rather than a boolean:
 
 | Field | What V8 gives |
@@ -540,7 +570,7 @@ node verify.js
 `verify.js` does not use the generator. It reads every record of every file, compiles the pattern again, matches
 every text again, and compares V8's answers with the recorded ones. It prints the patterns, tests and answers of
 each file, and checks the counts in `manifest.json` and the marks of the deviations. With Node 24.22.0 it reports no
-disagreements in 11,336,032 answers. With another Node, a disagreement is a place where its V8 differs. It checks
+disagreements in 11,473,986 answers. With another Node, a disagreement is a place where its V8 differs. It checks
 each file in a process of its own, because V8's answers for two of the hand-written patterns that it gets wrong
 (`(?i:\Bs)` and `(?i:\bk\b)`) change in a process that has compiled a great many patterns.
 
@@ -560,7 +590,7 @@ This needs Node 24.22.0, the Node that wrote the data (a later V8 may answer oth
 that release), and rewrites `data/`, all but the files that the three
 scripts below write, whose entries in `manifest.json` it keeps. The patterns and texts come from
 fixed lists and generators with fixed seeds, in `generate.js` for the first three files and in `families.js`,
-`more-families.js` and `unicode-sets.js` for the families. Each family has a seed of its own. A run with the same Node gives the same
+`more-families.js`, `unicode-sets.js` and `start-searches.js` for the families. Each family has a seed of its own. A run with the same Node gives the same
 files, and a run with a newer one shows what changed in V8. `timed.js` asks V8 about the families within the two
 limits. It uses four worker threads. `deviations.js` then marks the records of the later families where V8 is
 known to be wrong, with `reference.js` beside it. It starts other Node processes to do so. A run takes about half a
@@ -582,6 +612,15 @@ checkout of a later commit takes in what test262 has added.
 
 ```sh
 node ill-formed-utf8.js
+```
+
+`fuzz.js` is a fuzzer for an engine's start searches: it builds the start-searches family with a seed and a size of
+its own, asks this V8 about it within the same limits, and writes a data directory (`start-searches.jsonl`,
+`captures.jsonl` from it, and `manifest.json`) that any runner reads as it reads `data/`. A wrong answer on it is a
+fault; the test that keeps it belongs in the engine's own tests.
+
+```sh
+node fuzz.js fuzz-out 12345 3000
 ```
 
 ## Licence

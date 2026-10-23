@@ -95,11 +95,13 @@ function answers(pattern, flags, text) {
 module.exports = { answers, REPLACEMENT, MAX_TEXTS, MAX_MATCHES };
 if (require.main !== module) return;
 
-const files = fs.readdirSync(dir).filter((n) => n.endsWith(".jsonl") && n !== "captures.jsonl").sort();
+// ill-formed-utf8.jsonl holds bytes, not texts, and has no answers of V8's to take.
+const files = fs.readdirSync(dir).filter((n) => n.endsWith(".jsonl") && n !== "captures.jsonl" && n !== "ill-formed-utf8.jsonl").sort();
 const records = [];
 let tests = 0, deviations = 0, unstableCount = 0;
 for (const name of files) {
-  const every = name === "hand-written.jsonl" || name === "flags.jsonl" ? 1 : 10;
+  // start-searches.jsonl is about where a match starts, which only these answers say, so every record of it is here.
+  const every = name === "hand-written.jsonl" || name === "flags.jsonl" || name === "start-searches.jsonl" ? 1 : 10;
   const lines = fs.readFileSync(path.join(dir, name), "utf8").split("\n").filter((l) => l.length > 0);
   let k = 0;
   for (const l of lines) {
