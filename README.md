@@ -42,7 +42,8 @@ character is a `\uXXXX` escape, so no tool has to agree about an encoding.
 | `start-searches.jsonl` | 2,000 | 72,001 | Patterns made of what an engine's search for where a match can start reasons about (an assertion before one to three loops, then a literal or an alternation), each with texts of its own built from its literal, its sets and characters of every width, in the shapes that ask where a match starts. See [start searches](#start-searchesjsonl). |
 | `captures.jsonl` | 8,378 | 306,177 | Not `test` but the rest of `RegExp`: where the match is and what each group captured (`exec`), the matches of a global search, the sticky flag, `replace` with every form of `$`, and `split`, for every pattern of `hand-written.jsonl`, `flags.jsonl` and `start-searches.jsonl` and one record in ten of each other file. See [captures](#capturesjsonl). |
 | `ill-formed-utf8.jsonl` | 8 | 1,440 | Bytes that are not UTF-8, each of the ill-formed sequences of Unicode's Table 3-7 in six places in a text, for an engine's UTF-8 interface, which must refuse them. A test is its bytes in hexadecimal. It has no answer of V8's. See [ill-formed UTF-8](#ill-formed-utf8jsonl). |
-| `manifest.json` | | | The versions of Node, V8 and Unicode the data was generated with, the counts of each file, and for the families the limits and how many patterns they dropped. |
+| `manifest.json` | | | The versions of Node, V8 and Unicode the data was generated with, the counts of each file, for the families the limits and how many patterns they dropped, and the overlays for other versions of Unicode (`unicode_overlays`). |
+| `unicode/18.0.jsonl` | | 9,115 answers | The answers that differ under Unicode 18.0, for an engine with that version's character database. Not a file of tests: an overlay on the others. See [other versions of Unicode](#other-versions-of-unicode). |
 
 ## A record
 
@@ -478,6 +479,13 @@ counts them the same way. A runner that departs from this says so beside its fig
   V8 departs from ECMA-262"). Nothing else.
 - **The grammars.** Each record is asked about under every grammar V8 judged it in: `unicode` (the record's flags
   with `u`), `legacy` (its flags alone) and, where the record has it, `unicode_sets` (with `v`).
+- **The grammars an engine implements.** An engine that implements only some of the three (SRELL has no grammar but
+  the `u` and `v` ones; `std::regex` has neither of those) is asked under those alone, and says which, as it says
+  which encodings it answers in. Its figure is then a share of the answers of those grammars, and names them.
+- **The version of Unicode.** The answers are V8's, from its version of the Unicode Character Database
+  (`manifest.json`, `unicode`). An engine with another version says which, and is asked the questions of that
+  version: the data with that version's overlay applied (`node unicode.js apply <version> <dir>`). See
+  [other versions of Unicode](#other-versions-of-unicode).
 - **Validity.** Under a grammar V8 found valid, an engine that refuses the pattern scores one *refused*; under a
   grammar V8 found invalid, one that accepts it scores one *accepted invalid*. A correct verdict is not counted on
   its own; it opens the tests.
@@ -501,6 +509,40 @@ counts them the same way. A runner that departs from this says so beside its fig
   that answers everything as V8 does is 100%; a runner's summary line gives all five counts, as the Corvus runners
   print them (`right N  wrong N  refused-valid N  accepted-invalid N  limit N`).
 
+## Other versions of Unicode
+
+ECMA-262 asks an implementation for the latest version of Unicode, so engines differ in the version they have, and
+an answer that depends on it is right for one version and wrong for another. `data/unicode/<version>.jsonl` holds
+every answer and every validity that differs under another version than V8's, one JSON line each:
+
+```json
+{"file": "test262.jsonl", "line": 1234, "grammar": "unicode", "valid": true}
+{"file": "test262.jsonl", "line": 1234, "grammar": "unicode", "test": 5, "answer": true}
+```
+
+`line` counts the lines of the file from 1 and `test` the record's tests from 0; an answer has the shape the file's
+answers have. `node unicode.js apply <version> <dir>` writes the data with an overlay applied, which a runner reads in
+place of `data/`; the number of answers is the same, and only some of them differ. `node unicode.js check` checks
+that every line of every overlay fits the data, so an overlay made for other data cannot go stale unnoticed.
+
+**How an overlay is made.** No V8 has a later version than 17.0 yet, so another engine answers for it, one whose
+answers are V8's everywhere at 17.0 and whose tables alone change: the Corvus.Regex.Ecma262 data-set runner, built
+with the other version's tables, with `--answers` (it writes its own answers wherever they differ from the data's).
+For 18.0:
+
+1. The tables come from the Unicode Character Database 18.0.0 (`UCD.zip`, `emoji-sequences.txt` and
+   `emoji-zwj-sequences.txt`), through the `gen-unicode` program of the regress crate and the library's
+   `tools/unicode` scripts. The same chain run on 17.0.0 gives the tables the library ships, byte for byte.
+2. Run with the tables it ships, the runner's `--answers` writes nothing: every answer, every captures object and
+   every validity is V8's. Built with the 18.0 tables it writes the 9,115 answers of `unicode/18.0.jsonl` (4,542 of
+   `test262.jsonl` under `u`, the same under `v`, and 31 of `captures.jsonl`), and no validity.
+3. Every one of those answers is to a text that holds a character whose properties differ between the two versions'
+   tables, and SRELL (2026.07, an independent engine with the 18.0 database) departs from V8 on every one of them.
+4. Judged both ways, the 18.0 engine on V8's answers and the 17.0 engine on the overlaid answers give the same
+   18,494 wrong answers.
+
+An overlay belongs to the data it was made for: when the data is regenerated, the overlays are made again.
+
 ## What to know before relying on it
 
 - **It records one implementation.** The answers are V8's (13.6.233.17, in Node 24.22.0), not the specification's. For the
@@ -508,7 +550,8 @@ counts them the same way. A runner that departs from this says so beside its fig
 - **Known deviations.** V8 13.6 departs from ECMA-262 in six known ways, on 231 records. Those records have
   `"v8_deviation": true`. See the next section.
 - **Unicode 17.** V8 13.6.233.17 has the Unicode 17.0 character database, as test262 has. An engine with another
-  version will differ on the characters whose properties differ, in `\p{...}` and in case folding.
+  version answers otherwise on the characters whose properties differ, in `\p{...}` and in case folding. For the
+  versions an overlay exists for (18.0 so far), the answers of that version are in `data/unicode/`.
 - **No `v` flag in the first files.** Set notation and properties of strings are covered by `unicode-sets.jsonl`
   and the files from test262 only.
 - **Whole-text answers only.** A test says whether the pattern matches anywhere in the text. It does not record
@@ -574,6 +617,12 @@ disagreements in 11,473,986 answers. With another Node, a disagreement is a plac
 each file in a process of its own, because V8's answers for two of the hand-written patterns that it gets wrong
 (`(?i:\Bs)` and `(?i:\bk\b)`) change in a process that has compiled a great many patterns.
 
+```sh
+node unicode.js check
+```
+
+checks that every line of the overlays in `data/unicode/` fits the data.
+
 The matcher of `reference.js` was also run once over the twelve files that it has no part in generating. It was
 asked for 7.3 million of their answers, and gave V8's for all but those of ten records, which are the six marked
 ones of `hand-written.jsonl` and the four marked `surrogate-pair-start`. It was not asked where it does not read
@@ -585,6 +634,9 @@ pattern that took it too long.
 ```sh
 node generate.js
 ```
+
+After any regeneration, make the overlays of `data/unicode/` again (see
+[other versions of Unicode](#other-versions-of-unicode)); `node unicode.js check` fails while one is stale.
 
 This needs Node 24.22.0, the Node that wrote the data (a later V8 may answer otherwise, and V8 has had Unicode 17 since
 that release), and rewrites `data/`, all but the files that the three

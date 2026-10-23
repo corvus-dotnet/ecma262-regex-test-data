@@ -246,5 +246,14 @@
       "not_valid": 0,
       "tests": 1440
     }
+  ],
+  "unicode_overlays": [
+    {
+      "unicode": "18.0",
+      "file": "unicode/18.0.jsonl",
+      "answers": 9115,
+      "validities": 0,
+      "made_with": "the Corvus.Regex.Ecma262 data-set runner (--answers) built with Unicode 18.0.0 tables from regress's gen-unicode; checked against SRELL 2026.07"
+    }
   ]
 }
