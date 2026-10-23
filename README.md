@@ -429,7 +429,9 @@ counts them the same way. A runner that departs from this says so beside its fig
   lone surrogate, one more over UTF-8. An engine with one encoding answers in that one only, and says which.
 - **`captures.jsonl`.** For each test and each valid grammar: `exec`, `all` (the global search), `sticky`,
   `replace`, `replaceAll`, `split` and `split3` over UTF-16, and `exec`, `all`, `sticky`, `replace` and `replaceAll`
-  over UTF-8 when the text holds no lone surrogate. Each is one answer, right or wrong. Over UTF-8, positions are
+  over UTF-8 when the text holds no lone surrogate. Each is one answer, right or wrong. `sticky` is not asked of an
+  empty text (its answer is `null`), nor over UTF-8 where `lastIndex` 1 falls between the halves of a supplementary
+  character: UTF-8 has no such position, as it has no form of a lone surrogate. Over UTF-8, positions are
   byte offsets and a text answer is compared with V8's answer converted to UTF-8: where a match falls between the
   halves of a supplementary character (possible without `u` or `v`), V8's answer holds a lone half, which UTF-8
   cannot carry, so each lone half is U+FFFD.
