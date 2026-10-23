@@ -29,3 +29,5 @@ jobs:
         [ "$node" = "$(node --version)" ]
     - name: Verify every file
       run: node verify.js
+    - name: The overlays for other versions of Unicode fit the data
+      run: node unicode.js check
