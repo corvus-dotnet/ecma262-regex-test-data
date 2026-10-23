@@ -3,7 +3,9 @@
 What the V8 JavaScript engine says about 112,701 regular expression patterns. It says which ones are valid, and for
 52,819 of them, whether they match each of a set of texts. There are 5,677,081 texts in all, each with its answers,
 as plain JSON Lines. Most of the patterns are written for this data. 8,342 of them, and their texts, are taken from
-test262, the conformance suite of ECMA-262 (see [the files from test262](#the-files-from-test262)).
+test262, the conformance suite of ECMA-262 (see [the files from test262](#the-files-from-test262)). One more file
+holds 1,440 texts of bytes that are not UTF-8, for an engine that takes UTF-8, whose answer is that the engine refuses
+them (see [ill-formed UTF-8](#ill-formed-utf8jsonl)).
 
 It is for testing a regular expression engine, or a translation from ECMAScript syntax to another engine's, against a
 real implementation of ECMA-262. JSON Schema is one reason to need that: its `pattern` and `patternProperties`
@@ -38,6 +40,7 @@ character is a `\uXXXX` escape, so no tool has to agree about an encoding.
 | `test262.jsonl` | 4,907 | 547,818 | The patterns and texts of test262's regular expression tests, at the commit `manifest.json` names: every pattern a test builds or a syntax test refuses, and every text a test matches one against. A property escape test's text is the whole of a property, and is taken as the two ends of each of its ranges. See [the files from test262](#the-files-from-test262). |
 | `test262-lone-surrogates.jsonl` | 3,435 | 10,326 | The texts and patterns of `test262.jsonl` that hold half of a surrogate pair, as `lone-surrogates.jsonl` holds those of the families. |
 | `captures.jsonl` | 3,100 or so | 90,000 or so | Not `test` but the rest of `RegExp`: where the match is and what each group captured (`exec`), the matches of a global search, the sticky flag, `replace` with every form of `$`, and `split`, for every pattern of `hand-written.jsonl` and `flags.jsonl` and one record in ten of each family. See [captures](#capturesjsonl). |
+| `ill-formed-utf8.jsonl` | 8 | 1,440 | Bytes that are not UTF-8, each of the ill-formed sequences of Unicode's Table 3-7 in six places in a text, for an engine's UTF-8 interface, which must refuse them. A test is its bytes in hexadecimal. It has no answer of V8's. See [ill-formed UTF-8](#ill-formed-utf8jsonl). |
 | `manifest.json` | | | The versions of Node, V8 and Unicode the data was generated with, the counts of each file, and for the families the limits and how many patterns they dropped. |
 
 ## A record
@@ -70,6 +73,7 @@ character is a `\uXXXX` escape, so no tool has to agree about an encoding.
 | `tests[].unicode_sets` | Only in `unicode-sets.jsonl`: `RegExp.prototype.test` with the `v` flag. Present when `valid.unicode_sets` is true. |
 | `v8_deviation` | Present and true on 231 records where V8's answers are known to differ from the specification, or to change from run to run. See [where V8 departs from ECMA-262](#where-v8-departs-from-ecma-262). |
 | `deviation` | On a marked record of the later families and of the files from test262, the class of the deviation: `unstable`, `surrogate-pair-start`, `modifier-group`, `full-case-folding`, `single-character-string-case` or `ascii-case-folding`. An `unstable` record has no `tests`. |
+| `tests[].bytes`, `tests[].case` | Only in `ill-formed-utf8.jsonl`, in place of a text and its answers: the bytes in hexadecimal, and which ill-formed sequence they hold, and where. |
 | `test262` | Only in the files from test262: the test files of test262 the pattern and its texts were taken from, as paths in that repository. |
 
 The two modes can give different answers for one text. Without the `u` flag V8 matches UTF-16 code units, so a
@@ -374,6 +378,28 @@ from the other files,
 and `verify-captures.js` checks it; `verify.js` runs that for this file. The file is written by the Node the
 manifest's entry for it names.
 
+### `ill-formed-utf8.jsonl`
+
+For an engine that takes UTF-8: texts that are not UTF-8. A JavaScript string is UTF-16 code units, any of them, so
+JavaScript has no such text and V8 nothing to say about it. The answer is not V8's but the one an interface of bytes
+owes its caller: the engine refuses the text with an error of its own, as invalid input. It does not match it, read
+part of it, read an ill-formed sequence as U+FFFD or a byte as a Latin-1 character, crash or hang. An interface whose
+text type cannot hold such bytes (a Rust `&str`, a Swift `String`) refuses them where the bytes become that type, and
+that is its answer.
+
+Its tests are the ill-formed sequences of Unicode's Table 3-7 (the well-formed UTF-8 byte sequences): lone
+continuation bytes, bytes that are never used, overlong forms, encoded surrogates (one alone, and a pair as CESU-8
+writes it), values beyond U+10FFFF, the old five- and six-byte forms, and sequences cut short at the end or by another
+byte. Each is the whole text, and in five places in one: after `a`, between `ab` and `cd`, after `\u00e9`, after
+300 `a`s, and before `a`. Each record is one of eight patterns, every one valid in both grammars, with the same 180
+tests. `a`, and the empty pattern, match a text's first byte, so they tell an engine that checks a text as far as it
+reads it from one that checks it all. `\u{FFFD}` tells one that reads an ill-formed sequence as U+FFFD, `[\x80-\xFF]`
+one that reads a byte as a Latin-1 character, and `\p{Cs}` one that decodes an encoded surrogate.
+
+A test has `bytes` (hexadecimal) and `case` (what the bytes hold) and no answer under a grammar, so a runner that
+reads the other files by their fields asks it nothing. `ill-formed-utf8.js` writes it, and `verify.js` checks that
+each test's bytes are not UTF-8.
+
 ### The sizes
 
 Each family is sized to keep its file near the size of the first three, and a family with more texts has fewer
@@ -435,6 +461,10 @@ counts them the same way. A runner that departs from this says so beside its fig
   byte offsets and a text answer is compared with V8's answer converted to UTF-8: where a match falls between the
   halves of a supplementary character (possible without `u` or `v`), V8's answer holds a lone half, which UTF-8
   cannot carry, so each lone half is U+FFFD.
+- **`ill-formed-utf8.jsonl`.** Each test, under each grammar the pattern is valid in, is one answer over UTF-8 and
+  none over UTF-16. The engine's UTF-8 interface is asked whether the pattern matches the bytes. The right answer
+  is a refusal: the error the interface gives for input that is not UTF-8. A match or a mismatch is wrong, and a
+  crash or a hang is unanswered.
 - **No answer is a wrong answer.** A match that reaches the engine's time or memory limit, a crash or a hang scores
   one *unanswered* (the runner's `limit` column) for that answer, and every answer the record would have had.
 - **The figure.** Right over everything judged: right, wrong, refused, accepted invalid and unanswered. An engine
@@ -510,7 +540,7 @@ node verify.js
 `verify.js` does not use the generator. It reads every record of every file, compiles the pattern again, matches
 every text again, and compares V8's answers with the recorded ones. It prints the patterns, tests and answers of
 each file, and checks the counts in `manifest.json` and the marks of the deviations. With Node 24.22.0 it reports no
-disagreements in 11,333,152 answers. With another Node, a disagreement is a place where its V8 differs. It checks
+disagreements in 11,336,032 answers. With another Node, a disagreement is a place where its V8 differs. It checks
 each file in a process of its own, because V8's answers for two of the hand-written patterns that it gets wrong
 (`(?i:\Bs)` and `(?i:\bk\b)`) change in a process that has compiled a great many patterns.
 
@@ -527,7 +557,7 @@ node generate.js
 ```
 
 This needs Node 24.22.0, the Node that wrote the data (a later V8 may answer otherwise, and V8 has had Unicode 17 since
-that release), and rewrites `data/`, all but the files that the two
+that release), and rewrites `data/`, all but the files that the three
 scripts below write, whose entries in `manifest.json` it keeps. The patterns and texts come from
 fixed lists and generators with fixed seeds, in `generate.js` for the first three files and in `families.js`,
 `more-families.js` and `unicode-sets.js` for the families. Each family has a seed of its own. A run with the same Node gives the same
@@ -547,6 +577,12 @@ node test262.js test262
 
 It rewrites those two files, their entries in `manifest.json` and `NOTICE-test262.md`, and takes about a minute. A
 checkout of a later commit takes in what test262 has added.
+
+`ill-formed-utf8.jsonl` is written by `ill-formed-utf8.js`, which rewrites it and its entry in `manifest.json`:
+
+```sh
+node ill-formed-utf8.js
+```
 
 ## Licence
 
