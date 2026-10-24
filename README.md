@@ -44,6 +44,7 @@ character is a `\uXXXX` escape, so no tool has to agree about an encoding.
 | `ill-formed-utf8.jsonl` | 8 | 1,440 | Bytes that are not UTF-8, each of the ill-formed sequences of Unicode's Table 3-7 in six places in a text, for an engine's UTF-8 interface, which must refuse them. A test is its bytes in hexadecimal. It has no answer of V8's. See [ill-formed UTF-8](#ill-formed-utf8jsonl). |
 | `manifest.json` | | | The versions of Node, V8 and Unicode the data was generated with, the counts of each file, for the families the limits and how many patterns they dropped, and the overlays for other versions of Unicode (`unicode_overlays`). |
 | `unicode/18.0.jsonl` | | 9,115 answers | The answers that differ under Unicode 18.0, for an engine with that version's character database. Not a file of tests: an overlay on the others. See [other versions of Unicode](#other-versions-of-unicode). |
+| `spec/answers.jsonl` | | 660 answers | ECMA-262's answers where V8's recorded answer is wrong, on the records marked `v8_deviation`. Not a file of tests: answers to tests of the other files. See [the specification's answers](#the-specifications-answers-where-v8-departs). |
 
 ## A record
 
@@ -561,7 +562,8 @@ An overlay belongs to the data it was made for: when the data is regenerated, th
 
 The answers are V8's, and in six known classes of pattern V8 13.6 is wrong, or does not always say the same. A
 record of one of them is marked with `"v8_deviation": true`, and in the later families with a `deviation` that
-names the class. The answers of a marked record are still V8's. They should not be taken as the specification's.
+names the class. The answers of a marked record are still V8's. They should not be taken as the specification's. Where V8's answer is wrong, `spec/answers.jsonl` has the specification's (see
+[the specification's answers](#the-specifications-answers-where-v8-departs)).
 
 | Class | Records | What V8 does | Smallest example |
 |---|---|---|---|
@@ -604,6 +606,67 @@ How they are found. `deviations.js` looks at every record of the seven later fam
 `reference.js` is not the oracle, and it is not asked about the other files when they are generated. It was run
 over them once as a check, and the numbers of that run are in the section on checking.
 
+## The specification's answers where V8 departs
+
+`spec/answers.jsonl` holds ECMA-262's answer for each test of a marked record (`v8_deviation`) where V8's recorded
+answer is wrong: 660 answers, to 651 tests of 183 records. Each is one JSON line, in the form of the overlays for
+other versions of Unicode, with the class of the deviation and how the answer was established:
+
+```json
+{"file": "unicode-sets.jsonl", "line": 5194, "grammar": "unicode_sets", "test": 0, "answer": false, "deviation": "single-character-string-case", "basis": "engines and engine262"}
+```
+
+| Class | Answers | Records |
+|---|---|---|
+| `single-character-string-case` | 247 | 133 |
+| `surrogate-pair-start` | 159 | 6 (one of them in `captures.jsonl`) |
+| `modifier-group` | 130 | 27 |
+| `full-case-folding` | 102 | 6 |
+| `ascii-case-folding` | 20 | 10 |
+| `unstable` | 2 | 1 test of `captures.jsonl`, which had no answers before |
+
+The records stay marked, and a runner that skips them as before is not affected. A runner that judges them takes the
+answer of this file where it has one, and the record's answer otherwise: on every other test of a marked record V8's
+answer is the specification's.
+
+**How the answers were found.** The marked records, with their marks removed, were given to the data-set runners of
+the Corvus regular expression engines (the .NET and the Rust one), QuickJS-ng 0.17, SRELL 2026.07 and regress 0.12,
+each judging its engine against V8's answers. Wherever the Corvus engines and QuickJS-ng departed from V8 they gave
+the same answer, 737 answers in all counting each operation of a `captures.jsonl` test once; SRELL gave the same
+wherever it was asked (it has no legacy grammar), and regress on all but 56 of them. Each of those answers was then
+asked of engine262, a JavaScript engine written to the text of ECMA-262, at `main` (d553e7b): with one line of it
+corrected ([engine262#378](https://github.com/engine262/engine262/issues/378), the complement of a class under the
+`v` and `i` flags), it gives the same answer for all but 3. Those 3 (`[^\q{A}]` and `[^\q{\u212A}]` with `iv`) were
+settled from the text of ECMA-262 (MaybeSimpleCaseFolding folds the string of `\q{...}`, so the complement leaves out
+`a` and `k`), where engine262 has a second fault ([engine262#379](https://github.com/engine262/engine262/issues/379)).
+The `basis` of each line says which.
+
+**What is not in it.**
+
+- 31 answers that depend on [tc39/ecma262#4006](https://github.com/tc39/ecma262/issues/4006): a lone General_Category
+  value such as `\p{Lu}` in a set operation under the `v` and `i` flags, which the text of ECMA-262 does not case-fold
+  while it folds `\p{gc=Lu}`. The engines above fold both, and so does engine262. They are held until that issue is
+  decided; 17 records have no other answer that V8 gets wrong, and so no line here yet.
+- The sticky answers of the six `surrogate-pair-start` tests of `captures.jsonl` with `lastIndex` 1 inside a surrogate
+  pair. There V8's answer is the one intended: matching starts at the code point that holds `lastIndex`
+  ([tc39/ecma262#128](https://github.com/tc39/ecma262/issues/128),
+  [#2511](https://github.com/tc39/ecma262/issues/2511)). The text of ECMA-262 as it stands gives a match that starts
+  after it ends there, and engine262 fails an assertion of the specification on it.
+- The 32 `unstable` records, which have no tests, and `(?i:\Bs)` in `hand-written.jsonl`, whose recorded answers are
+  the specification's although V8's change from one run to the next.
+
+**V8 since.** Every class has been corrected in V8: the modifier groups and the unstable answers by the redesign of
+how a pattern's flags are kept ([8260876](https://chromium-review.googlesource.com/c/v8/v8/+/8260876), V8 15.4;
+[nodejs/node#66277](https://github.com/nodejs/node/issues/66277)), the backreferences under `iu`
+([8423859](https://chromium-review.googlesource.com/c/v8/v8/+/8423859)), single characters in `\q{...}`
+([8549637](https://chromium-review.googlesource.com/c/v8/v8/+/8549637)) and `\p{ASCII}`
+([8641470](https://chromium-review.googlesource.com/c/v8/v8/+/8641470)). V8 15.8.45 gives the specification's answer
+on every one of the 660 but the 20 of `ascii-case-folding`, which the last of those changes, made after that release, is to correct.
+
+`node spec-answers.js check` checks that every line fits the data: the record or test is marked, the test exists, and
+the answer differs from V8's. The answers belong to the data they were made for, and are made again when it is
+regenerated.
+
 ## Checking it
 
 ```sh
@@ -622,6 +685,12 @@ node unicode.js check
 ```
 
 checks that every line of the overlays in `data/unicode/` fits the data.
+
+```sh
+node spec-answers.js check
+```
+
+checks that every line of `data/spec/answers.jsonl` fits the data.
 
 The matcher of `reference.js` was also run once over the twelve files that it has no part in generating. It was
 asked for 7.3 million of their answers, and gave V8's for all but those of ten records, which are the six marked
