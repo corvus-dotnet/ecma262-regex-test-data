@@ -21,7 +21,11 @@
 //
 // apply: writes the data with the overlay of a version applied to <out directory>, every file the same but the
 // records the overlay changes, so that a runner judges an engine of that version by reading that directory in place
-// of data/. A validity made false drops the record's answers in that grammar.
+// of data/: the files at the top, manifest.json and exec/test262.jsonl. A validity made false drops the record's
+// answers in that grammar.
+//
+// A line for exec/test262.jsonl names the one grammar the record's flags give (v, u, or neither: legacy) and replaces
+// the call's answer.
 
 const fs = require("fs");
 const path = require("path");
@@ -43,6 +47,19 @@ function read(dir, version) {
   return fs.readFileSync(file, "utf8").split("\n").filter((l) => l.trim()).map((l) => JSON.parse(l));
 }
 
+// The files a runner reads, which apply writes: the test files at the top, manifest.json and the exec calls.
+function dataFiles(dir) {
+  const top = fs.readdirSync(dir).filter((f) => f.endsWith(".jsonl") || f === "manifest.json");
+  return fs.existsSync(path.join(dir, EXEC)) ? [...top, EXEC] : top;
+}
+
+const EXEC = "exec/test262.jsonl";
+
+// The grammar of a record of exec/test262.jsonl: that of its flags.
+function grammarOf(flags) {
+  return flags.includes("v") ? "unicode_sets" : flags.includes("u") ? "unicode" : "legacy";
+}
+
 // The lines of a data file, read once.
 function lines(dir, cache, file) {
   if (!cache.has(file)) cache.set(file, fs.readFileSync(path.join(dir, file), "utf8").split("\n"));
@@ -62,6 +79,14 @@ function check(dir) {
       const text = lines(dir, cache, e.file)[e.line - 1];
       if (!text) return fail(`${e.file} has no line ${e.line}`);
       const r = JSON.parse(text);
+      if (e.file === EXEC) {
+        if (e.grammar !== grammarOf(r.flags)) return fail(`the record's flags give ${grammarOf(r.flags)}, not ${e.grammar}`);
+        if ("valid" in e) return fail("a call of exec has no validity to change");
+        const t = r.tests[e.test];
+        if (!t) return fail(`the record has no test ${e.test}`);
+        if (JSON.stringify(t.answer) === JSON.stringify(e.answer)) fail(`test ${e.test} already answers ${JSON.stringify(e.answer)}`);
+        return;
+      }
       if (!(e.grammar in r.valid)) return fail(`the record has no ${e.grammar} grammar`);
       if ("valid" in e) {
         if (r.valid[e.grammar] === e.valid) fail(`the record's validity under ${e.grammar} is already ${e.valid}`);
@@ -85,8 +110,8 @@ function apply(dir, version, out) {
     if (!byFile.has(e.file)) byFile.set(e.file, []);
     byFile.get(e.file).push(e);
   }
-  fs.mkdirSync(out, { recursive: true });
-  for (const file of fs.readdirSync(dir).filter((f) => f.endsWith(".jsonl") || f === "manifest.json")) {
+  fs.mkdirSync(path.join(out, path.dirname(EXEC)), { recursive: true });
+  for (const file of dataFiles(dir)) {
     const entries = byFile.get(file);
     if (!entries) {
       fs.copyFileSync(path.join(dir, file), path.join(out, file));
@@ -97,7 +122,9 @@ function apply(dir, version, out) {
     for (const e of entries) {
       if (!records.has(e.line)) records.set(e.line, JSON.parse(all[e.line - 1]));
       const r = records.get(e.line);
-      if ("valid" in e) {
+      if (file === EXEC) {
+        r.tests[e.test].answer = e.answer;
+      } else if ("valid" in e) {
         r.valid[e.grammar] = e.valid;
         if (!e.valid) for (const t of r.tests || []) delete t[e.grammar];
       } else {

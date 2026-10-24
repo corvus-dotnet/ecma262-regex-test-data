@@ -591,7 +591,9 @@ every answer and every validity that differs under another version than V8's, on
 ```
 
 `line` counts the lines of the file from 1 and `test` the record's tests from 0; an answer has the shape the file's
-answers have. `node unicode.js apply <version> <dir>` writes the data with an overlay applied, which a runner reads in
+answers have. A line for `exec/test262.jsonl` names the one grammar the record's flags give and replaces the call's
+`answer`; no call depends on the version yet, so 18.0 has none. `node unicode.js apply <version> <dir>` writes the
+data with an overlay applied (the files at the top, `manifest.json` and `exec/test262.jsonl`), which a runner reads in
 place of `data/`; the number of answers is the same, and only some of them differ. `node unicode.js check` checks
 that every line of every overlay fits the data, so an overlay made for other data cannot go stale unnoticed.
 
