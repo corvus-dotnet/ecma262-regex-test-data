@@ -33,3 +33,5 @@ jobs:
       run: node unicode.js check
     - name: The specification's answers where V8 departs fit the data
       run: node spec-answers.js check
+    - name: Every exec call of test262 gives V8's answer again
+      run: node verify-test262-exec.js

@@ -1,15 +1,15 @@
 # test262
 
-`data/test262.jsonl` and `data/test262-lone-surrogates.jsonl` hold patterns and texts taken from test262, the
-ECMAScript conformance test suite (https://github.com/tc39/test262), at commit
-d53ebc8b1931d9f1541e43d59650776e4b766248. Each record names, in its `test262` field, the test files it was taken
-from. The answers are V8's, and not part of test262.
+`data/test262.jsonl`, `data/test262-lone-surrogates.jsonl` and `data/exec/test262.jsonl` hold patterns and texts taken
+from test262, the ECMAScript conformance test suite (https://github.com/tc39/test262), at commit
+d53ebc8b1931d9f1541e43d59650776e4b766248. Each record names, in its `test262` field, the test files it was taken from.
+The answers are V8's, and not part of test262.
 
-Those patterns and texts are used under test262's licence, which is below, as it is in test262's `LICENSE` file.
-The rest of this repository is under the MIT licence in [LICENSE](LICENSE).
+Those patterns and texts are used under test262's licence, which is below, as it is in test262's `LICENSE` file. The
+rest of this repository is under the MIT licence in [LICENSE](LICENSE).
 
-`test262.js` writes this file. Each test file of test262 carries a copyright line of its own and says that it is
-governed by the licence below. These are the lines of the 1817 files the records were taken from:
+`test262.js` and `test262-exec.js` write this file. Each test file of test262 carries a copyright line of its own and
+says that it is governed by the licence below. These are the lines of the 1819 files the records were taken from:
 
 - Copyright (C) 2015 André Bargull.
 - Copyright (C) 2015 Zirak.
