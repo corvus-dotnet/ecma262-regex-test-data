@@ -434,21 +434,24 @@ const limits = { backtracks: 250000, limitMs: 250, threads: 4 };
   // ill-formed-utf8.jsonl by ill-formed-utf8.js, which put their own entries in the manifest: those entries are kept.
   // The overlays for other versions of Unicode (data/unicode/) are kept too; unicode.js check fails while one no
   // longer fits the data, and the overlays are then made again. So is the entry of spec/answers.jsonl, which
-  // spec-answers.js check holds to the data the same way.
+  // spec-answers.js check holds to the data the same way, and so are the entries of the files of exec calls
+  // (data/exec/, written by test262-exec.js).
   const manifestPath = path.join(out, "manifest.json");
-  let overlays, specAnswers;
+  let overlays, specAnswers, exec;
   if (fs.existsSync(manifestPath)) {
     const kept = ["captures.jsonl", "test262.jsonl", "test262-lone-surrogates.jsonl", "ill-formed-utf8.jsonl"];
     const previous = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
     files.push(...previous.files.filter((f) => kept.includes(f.file)));
     overlays = previous.unicode_overlays;
     specAnswers = previous.spec_answers;
+    exec = previous.exec;
   }
   fs.writeFileSync(manifestPath, JSON.stringify({
     node: process.version, v8: process.versions.v8, unicode: process.versions.unicode,
     backtrack_budget: withBudget ? limits.backtracks : null, time_limit_ms: limits.limitMs, files,
     ...(overlays ? { unicode_overlays: overlays } : {}),
     ...(specAnswers ? { spec_answers: specAnswers } : {}),
+    ...(exec ? { exec } : {}),
   }, null, 2) + "\n");
   for (const f of files) console.log(`${f.file}: ${f.patterns} patterns, ${f.tests} tests`);
 })().catch((e) => { console.error(e); process.exit(1); });

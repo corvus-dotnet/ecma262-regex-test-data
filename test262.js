@@ -36,10 +36,10 @@
 
 const fs = require("fs");
 const path = require("path");
-const vm = require("vm");
 const { execFileSync } = require("child_process");
 const { evaluate, withBudget } = require("./timed");
 const { mark } = require("./deviations");
+const { directories, walk, frontMatter, runner, writeNotice } = require("./test262-run");
 const { reference, Unsupported, OverBudget } = require("./reference");
 
 const root = process.argv[2] && path.resolve(process.argv[2]);
@@ -49,51 +49,7 @@ if (!root || !fs.existsSync(path.join(root, "harness", "assert.js"))) {
 }
 const out = path.resolve(process.argv[3] || path.join(__dirname, "data"));
 const commit = execFileSync("git", ["-C", root, "rev-parse", "HEAD"], { encoding: "utf8" }).trim();
-
-// The directories of test262 that are about regular expressions.
-const directories = [
-  "test/built-ins/RegExp", "test/annexB/built-ins/RegExp", "test/language/literals/regexp",
-  "test/built-ins/String/prototype/match", "test/built-ins/String/prototype/matchAll",
-  "test/built-ins/String/prototype/replace", "test/built-ins/String/prototype/replaceAll",
-  "test/built-ins/String/prototype/search", "test/built-ins/String/prototype/split",
-];
-
-function walk(dir, files) {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name < b.name ? -1 : 1)) {
-    const p = path.join(dir, entry.name);
-    if (entry.isDirectory()) walk(p, files);
-    else if (entry.name.endsWith(".js") && !entry.name.includes("_FIXTURE")) files.push(p);
-  }
-  return files;
-}
-
-// The front matter of a test: its includes, its flags and whether it is a negative test.
-function frontMatter(source) {
-  const m = /\/\*---([\s\S]*?)---\*\//.exec(source);
-  const yaml = m ? m[1] : "";
-  const list = (key) => {
-    const inline = new RegExp("^" + key + ":\\s*\\[([^\\]]*)\\]", "m").exec(yaml);
-    if (inline) return inline[1].split(",").map((s) => s.trim()).filter(Boolean);
-    const block = new RegExp("^" + key + ":\\s*\\n((?:\\s+-.*\\n?)+)", "m").exec(yaml);
-    return block ? block[1].split("\n").map((s) => s.replace(/^\s*-\s*/, "").trim()).filter(Boolean) : [];
-  };
-  const negative = /^negative:\s*\n\s+phase:\s*(\w+)\s*\n\s+type:\s*(\w+)/m.exec(yaml);
-  return { includes: list("includes"), flags: list("flags"), negative: negative ? { phase: negative[1], type: negative[2] } : null };
-}
-
-const harnessFiles = {};
-function harness(name) {
-  if (!(name in harnessFiles)) {
-    let text = fs.readFileSync(path.join(root, "harness", name), "utf8");
-    // An alias declared const could not be pointed at the watcher below.
-    if (name === "regExpUtils.js") {
-      text = text.replace("const testExtendedCharacterClass = testPropertyOfStrings;",
-        "function testExtendedCharacterClass(args) { return testPropertyOfStrings(args); }");
-    }
-    harnessFiles[name] = text;
-  }
-  return harnessFiles[name];
-}
+const run = runner(root);
 
 // Run first in each context. It watches RegExp.prototype.exec, through which test, match, replace, search and split
 // all go, and the RegExp constructor, and returns the log. It reads the source and the flags of a regular expression
@@ -161,34 +117,6 @@ const watch = `
   return log;
 })();
 `;
-
-function run(file, source, meta) {
-  // A literal with a property that V8 does not know is an early error, and none of the file would run.
-  if (file.includes("/property-escapes/generated/")) {
-    source = source.replace(/testPropertyEscapes\(\s*\/((?:\\.|[^\/\\\n])+)\/([a-z]*)\s*,/g,
-      (m, p, f) => `testPropertyEscapes({ __pattern: ${JSON.stringify(p)}, __flags: ${JSON.stringify(f)} },`);
-  }
-  const strict = meta.flags.includes("onlyStrict") ? '"use strict";\n' : "";
-  const context = vm.createContext({ print() {} });
-  const log = vm.runInContext(watch, context);
-  try {
-    if (!meta.flags.includes("raw")) {
-      let code = harness("assert.js") + "\n" + harness("sta.js") + "\n";
-      if (meta.flags.includes("async")) code += harness("doneprintHandle.js") + "\n";
-      for (const name of meta.includes) code += harness(name) + "\n";
-      vm.runInContext(strict + code, context);
-      vm.runInContext("__watchHarness()", context);
-    }
-    vm.runInContext(strict + source, context, { filename: file, timeout: 60000 });
-  } catch (e) {
-    // A test that fails, or a negative test, still leaves its log. Whether V8 passes test262 is not this data's
-    // question: the answers are checked below.
-  }
-  // The log lives in the test's context, whose Array.prototype the test may have changed.
-  const entries = [];
-  for (let i = 0; i < log.length; i++) entries.push(JSON.parse(JSON.stringify(log[i])));
-  return entries;
-}
 
 // The pattern of a negative syntax test: the regular expression literal after $DONOTEVALUATE(). A line terminator
 // ends a literal before its closing slash, which is an error of the grammar of literals and not of patterns.
@@ -330,43 +258,11 @@ function entry(name, records) {
   return e;
 }
 
-// The copyright lines of the test files the records were taken from, for NOTICE-test262.md.
-function notice(used) {
-  const holders = new Set();
-  for (const file of used) {
-    const head = fs.readFileSync(path.join(root, file), "utf8").split("\n").slice(0, 5);
-    for (const l of head) {
-      const m = /^\/\/\s*(Copyright.*?)\s*$/i.exec(l);
-      if (m) holders.add(m[1].replace(/\s*All rights reserved\.?$/i, ""));
-    }
-  }
-  const licence = fs.readFileSync(path.join(root, "LICENSE"), "utf8").replace(/\s+$/, "");
-  return `# test262
-
-\`data/test262.jsonl\` and \`data/test262-lone-surrogates.jsonl\` hold patterns and texts taken from test262, the
-ECMAScript conformance test suite (https://github.com/tc39/test262), at commit
-${commit}. Each record names, in its \`test262\` field, the test files it was taken
-from. The answers are V8's, and not part of test262.
-
-Those patterns and texts are used under test262's licence, which is below, as it is in test262's \`LICENSE\` file.
-The rest of this repository is under the MIT licence in [LICENSE](LICENSE).
-
-\`test262.js\` writes this file. Each test file of test262 carries a copyright line of its own and says that it is
-governed by the licence below. These are the lines of the ${used.size} files the records were taken from:
-
-${[...holders].sort().map((h) => "- " + h).join("\n")}
-
-## test262's licence
-
-\`\`\`text
-${licence}
-\`\`\`
-`;
-}
 
 const limits = { backtracks: 250000, limitMs: 250, threads: 4 };
 
-(async () => {
+module.exports = { harvest };
+if (require.main === module) (async () => {
   if (!withBudget) console.error("This V8 has no backtrack limit: only the time limit applies, and it varies.");
   const { files, candidates, claims, used } = harvest();
   console.error(`${files.length} test files read, ${candidates.length} patterns`);
@@ -481,6 +377,6 @@ const limits = { backtracks: 250000, limitMs: 250, threads: 4 };
   const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
   manifest.files = manifest.files.filter((f) => !written.some((w) => w.file === f.file)).concat(written);
   fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
-  fs.writeFileSync(path.join(__dirname, "NOTICE-test262.md"), notice(used));
+  writeNotice(root, commit, out, path.join(__dirname, "NOTICE-test262.md"));
   for (const e of written) console.log(`${e.file}: ${e.patterns} patterns, ${e.tests} tests, deviations ${JSON.stringify(e.v8_deviations)}`);
 })().catch((e) => { console.error(e); process.exit(1); });

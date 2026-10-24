@@ -186,8 +186,8 @@
     },
     {
       "file": "captures.jsonl",
-      "patterns": 8378,
-      "tests": 306177,
+      "patterns": 8457,
+      "tests": 306315,
       "v8_deviations": {
         "surrogate-pair-start": 16,
         "unstable": 1
@@ -196,18 +196,26 @@
       "v8": "13.6.233.17-node.57"
     },
     {
+      "file": "ill-formed-utf8.jsonl",
+      "patterns": 8,
+      "valid_unicode": 8,
+      "valid_legacy_only": 0,
+      "not_valid": 0,
+      "tests": 1440
+    },
+    {
       "file": "test262.jsonl",
-      "patterns": 4907,
-      "valid_unicode": 3989,
-      "valid_legacy_only": 680,
+      "patterns": 5559,
+      "valid_unicode": 4567,
+      "valid_legacy_only": 754,
       "not_valid": 213,
-      "tests": 547818,
-      "valid_unicode_sets": 4076,
+      "tests": 613176,
+      "valid_unicode_sets": 4638,
       "valid_unicode_sets_only": 25,
       "v8_deviations": {
-        "unstable": 1
+        "unstable": 2
       },
-      "candidates": 4907,
+      "candidates": 5559,
       "dropped_for_backtracks": 0,
       "dropped_for_time": 0,
       "node": "v24.22.0",
@@ -221,12 +229,12 @@
     },
     {
       "file": "test262-lone-surrogates.jsonl",
-      "patterns": 3435,
-      "valid_unicode": 3434,
+      "patterns": 3450,
+      "valid_unicode": 3449,
       "valid_legacy_only": 0,
       "not_valid": 1,
-      "tests": 10326,
-      "valid_unicode_sets": 3434,
+      "tests": 12402,
+      "valid_unicode_sets": 3449,
       "valid_unicode_sets_only": 0,
       "v8_deviations": {},
       "node": "v24.22.0",
@@ -237,14 +245,6 @@
         "commit": "d53ebc8b1931d9f1541e43d59650776e4b766248",
         "files_read": 2520
       }
-    },
-    {
-      "file": "ill-formed-utf8.jsonl",
-      "patterns": 8,
-      "valid_unicode": 8,
-      "valid_legacy_only": 0,
-      "not_valid": 0,
-      "tests": 1440
     }
   ],
   "unicode_overlays": [
@@ -261,5 +261,20 @@
     "answers": 660,
     "held": 31,
     "made_with": "the Corvus.Regex.Ecma262 data-set runner (--answers) where QuickJS-ng 0.17, SRELL 2026.07 and regress 0.12 were asked too, checked against engine262 (main at d553e7b, with engine262#378 fixed) and the text of ECMA-262; 31 answers that depend on tc39/ecma262#4006 are held"
-  }
+  },
+  "exec": [
+    {
+      "file": "exec/test262.jsonl",
+      "patterns": 1406,
+      "tests": 134304,
+      "v8_deviations": {},
+      "test262": {
+        "repository": "https://github.com/tc39/test262",
+        "commit": "d53ebc8b1931d9f1541e43d59650776e4b766248",
+        "files_read": 2140,
+        "files_passed": 2077,
+        "calls": 135390
+      }
+    }
+  ]
 }
