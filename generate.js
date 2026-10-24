@@ -285,9 +285,12 @@ const out = path.resolve(process.argv[2] || path.join(__dirname, "data"));
 fs.mkdirSync(out, { recursive: true });
 
 // V8 13.6 answers these case-insensitive modifier groups differently from the same pattern with the i flag, which
-// ECMA-262 does not allow. Their records are marked, and their answers should not be taken as the specification's.
-const v8Deviations = new Set([
-  "^(?i:\\u212a)$", "^(?i:\\u017f)$", "^(?i:\\u1e9e)$", "^(?i:\\u03bc)$", "^(?i:\\u03bc)\\&?$", "(?i:\\Bs)",
+// ECMA-262 does not allow (the modifier-group class of deviations.js), and (?i:\Bs) differently from one run to the
+// next (unstable). Their records are marked with the class, and their answers should not be taken as the
+// specification's.
+const v8Deviations = new Map([
+  ["^(?i:\\u212a)$", "modifier-group"], ["^(?i:\\u017f)$", "modifier-group"], ["^(?i:\\u1e9e)$", "modifier-group"],
+  ["^(?i:\\u03bc)$", "modifier-group"], ["^(?i:\\u03bc)\\&?$", "modifier-group"], ["(?i:\\Bs)", "unstable"],
 ]);
 
 // The record of a pattern: whether V8 accepts it with the u flag ("unicode") and without it ("legacy"), and V8's
@@ -297,7 +300,10 @@ function record(source, pattern, flags, texts) {
   try { u = new RegExp(pattern, flags + "u"); } catch (e) {}
   try { l = new RegExp(pattern, flags); } catch (e) {}
   const r = { pattern, flags, source, valid: { unicode: !!u, legacy: !!l } };
-  if (v8Deviations.has(pattern)) r.v8_deviation = true;
+  if (v8Deviations.has(pattern)) {
+    r.v8_deviation = true;
+    r.deviation = v8Deviations.get(pattern);
+  }
   if (texts && (u || l)) {
     r.tests = texts.map((text) => {
       const t = { text };
@@ -433,17 +439,18 @@ const limits = { backtracks: 250000, limitMs: 250, threads: 4 };
   // captures.jsonl is written by generate-captures.js, the two files of test262 by test262.js, and
   // ill-formed-utf8.jsonl by ill-formed-utf8.js, which put their own entries in the manifest: those entries are kept.
   // The overlays for other versions of Unicode (data/unicode/) are kept too; unicode.js check fails while one no
-  // longer fits the data, and the overlays are then made again. So is the entry of spec/answers.jsonl, which
-  // spec-answers.js check holds to the data the same way, and so are the entries of the files of exec calls
-  // (data/exec/, written by test262-exec.js).
+  // longer fits the data, and the overlays are then made again. So are the entries of spec/answers.jsonl and
+  // spec/unstable.jsonl, which spec-answers.js check holds to the data the same way, and so are the entries of the
+  // files of exec calls (data/exec/, written by test262-exec.js).
   const manifestPath = path.join(out, "manifest.json");
-  let overlays, specAnswers, exec;
+  let overlays, specAnswers, specUnstable, exec;
   if (fs.existsSync(manifestPath)) {
     const kept = ["captures.jsonl", "test262.jsonl", "test262-lone-surrogates.jsonl", "ill-formed-utf8.jsonl"];
     const previous = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
     files.push(...previous.files.filter((f) => kept.includes(f.file)));
     overlays = previous.unicode_overlays;
     specAnswers = previous.spec_answers;
+    specUnstable = previous.spec_unstable;
     exec = previous.exec;
   }
   fs.writeFileSync(manifestPath, JSON.stringify({
@@ -451,6 +458,7 @@ const limits = { backtracks: 250000, limitMs: 250, threads: 4 };
     backtrack_budget: withBudget ? limits.backtracks : null, time_limit_ms: limits.limitMs, files,
     ...(overlays ? { unicode_overlays: overlays } : {}),
     ...(specAnswers ? { spec_answers: specAnswers } : {}),
+    ...(specUnstable ? { spec_unstable: specUnstable } : {}),
     ...(exec ? { exec } : {}),
   }, null, 2) + "\n");
   for (const f of files) console.log(`${f.file}: ${f.patterns} patterns, ${f.tests} tests`);
