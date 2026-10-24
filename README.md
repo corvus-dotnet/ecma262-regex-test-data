@@ -1,11 +1,24 @@
 # ECMA-262 regular expression test data
 
-What the V8 JavaScript engine says about 114,701 regular expression patterns. It says which ones are valid, and for
-54,819 of them, whether they match each of a set of texts. There are 5,749,082 texts in all, each with its answers,
-as plain JSON Lines. Most of the patterns are written for this data. 8,342 of them, and their texts, are taken from
-test262, the conformance suite of ECMA-262 (see [the files from test262](#the-files-from-test262)). One more file
-holds 1,440 texts of bytes that are not UTF-8, for an engine that takes UTF-8, whose answer is that the engine refuses
-them (see [ill-formed UTF-8](#ill-formed-utf8jsonl)).
+What the V8 JavaScript engine says about over a hundred thousand regular expression patterns, as plain JSON Lines:
+which are valid under each of the grammars of ECMA-262 (the `u` and `v` flags, and neither), and whether each valid
+one matches each of its texts, several million texts in all. Most of the patterns are written for this data. The
+rest, and their texts, are taken from test262, the conformance suite of ECMA-262 (see
+[the files from test262](#the-files-from-test262)).
+
+Beside those answers are:
+
+- where each match is and what each group captured, for a sample of the patterns ([`captures.jsonl`](#capturesjsonl));
+- every call of `exec` that test262's tests make, with `lastIndex`, the `g`, `y` and `d` flags and the whole result
+  ([`exec/test262.jsonl`](#exectest262jsonl));
+- texts of bytes that are not UTF-8, for an engine that takes UTF-8, whose answer is a refusal
+  ([ill-formed UTF-8](#ill-formed-utf8jsonl));
+- the answers that differ under a later version of Unicode ([other versions of Unicode](#other-versions-of-unicode));
+- ECMA-262's answer wherever V8's is known to be wrong
+  ([the specification's answers](#the-specifications-answers-where-v8-departs)).
+
+The counts of every file are in `data/manifest.json`, which the generators write and `verify.js` checks against the
+files.
 
 It is for testing a regular expression engine, or a translation from ECMAScript syntax to another engine's, against a
 real implementation of ECMA-262. JSON Schema is one reason to need that: its `pattern` and `patternProperties`
@@ -13,39 +26,42 @@ keywords and its `regex` format are defined as ECMA-262 regular expressions, and
 differ from it in many small ways (what `\d`, `\w`, `\s` and `.` mean, case folding, Unicode properties, lookbehind,
 what is a syntax error).
 
-The data is the oracle that the [Corvus JSON Schema](https://github.com/corvus-dotnet/Corvus.JsonSchema) evaluators
-for Rust, Java, Go, Julia and Object Pascal are tested against, written out in full.
+The data is the oracle that the Corvus ECMA-262 regular expression engines (for .NET, Rust, Java and the languages
+bound to the Rust crate) and the [Corvus JSON Schema](https://github.com/corvus-dotnet/Corvus.JsonSchema) evaluators
+are tested against, written out in full.
 
 ## The files
 
 Everything is in `data/`. Each `.jsonl` file has one JSON object to a line. The files are ASCII: every other
 character is a `\uXXXX` escape, so no tool has to agree about an encoding.
 
-| File | Patterns | Tests | What is in it |
-|---|---|---|---|
-| `hand-written.jsonl` | 783 | 194,649 | Patterns written by hand to cover the grammar and the semantics: escapes, classes, quantifiers, groups, lookaround, backreferences, named groups, Unicode properties, case folding, the ECMAScript 2025 additions, and patterns found in real JSON schemas. Each is matched against 273 texts. |
-| `flags.jsonl` | 600 | 163,800 | 150 patterns, each with the flags `i`, `m`, `s` and `ims`, matched against the same 273 texts. They cover case-insensitive matching, multiline anchors and the dot. |
-| `generated.jsonl` | 60,000 | 182,000 | Patterns of 1 to 8 characters drawn at random from an alphabet of regular expression syntax. Most are not valid, which is the point: they test what a parser accepts and what it refuses. The first 4,000 are also matched against 80 short texts. |
-| `anchored-lists.jsonl` | 6,000 | 342,200 | Anchors and assertions inside lists, prefixes, suffixes, alternations and class sequences. Each is matched against 58 texts. See [the families](#the-families). |
-| `empty-loops.jsonl` | 6,838 | 341,900 | Counted groups whose body can match the empty string. Each is matched against 50 texts. |
-| `line-terminators.jsonl` | 3,000 | 300,000 | Anchors, the dot and classes against texts that begin, end or are broken by a line terminator. Each is matched against 100 texts. |
-| `word-boundaries.jsonl` | 2,000 | 542,000 | `\b` and `\B` at every place in short patterns. Each is matched against 271 texts, which include every text of up to three characters over a six-character alphabet. |
-| `backreferences.jsonl` | 3,871 | 514,843 | Backreferences to groups of repetitions, of alternatives and of optional groups, to groups that are never set, and from inside the group. Each is matched against 133 texts. |
-| `lookarounds.jsonl` | 4,499 | 590,167 | Groups that a lookahead or a lookbehind sets, read outside it or in the same repetition. Each is matched against about 130 texts, which include every text of up to four characters over its alphabet. |
-| `case-folding.jsonl` | 2,863 | 408,326 | Case-insensitive literals, classes and backreferences, with the `i` flag and in `(?i:` groups, against the characters whose case pairs host engines get wrong. The number of texts depends on the pattern. |
-| `code-units.jsonl` | 3,000 | 296,940 | Patterns that are valid only without the `u` flag, and so are matched by UTF-16 code unit, against texts with characters beyond the Basic Multilingual Plane. Each is matched against 105 texts. |
-| `lone-surrogates.jsonl` | 1,500 | 69,000 | The same kind of pattern against 46 texts that hold half of a surrogate pair. The texts are not valid Unicode, which is why they have a file of their own. |
-| `engine-faults.jsonl` | 3,885 | 377,812 | Patterns on which a host engine itself goes wrong, and syntax that host engines have and ECMA-262 has not. 628 of them are not valid. The others are matched against 116 texts. |
-| `unicode-sets.jsonl` | 5,520 | 795,300 | The `v` flag: nested classes, the difference and the intersection of classes, strings in classes and the properties of strings, with the `i` flag and without. Every record is answered with the `v` flag as well as with `u` and with neither, because the three grammars read a class differently. Each is matched against 150 texts. See [the families](#the-families). |
-| `test262.jsonl` | 5,559 | 613,176 | The patterns and texts of test262's regular expression tests, at the commit `manifest.json` names: every pattern a test builds or a syntax test refuses, and every text a test matches one against. A property escape test's text is the whole of a property, and is taken as the two ends of each of its ranges. See [the files from test262](#the-files-from-test262). |
-| `test262-lone-surrogates.jsonl` | 3,450 | 12,402 | The texts and patterns of `test262.jsonl` that hold half of a surrogate pair, as `lone-surrogates.jsonl` holds those of the families. |
-| `start-searches.jsonl` | 2,000 | 72,001 | Patterns made of what an engine's search for where a match can start reasons about (an assertion before one to three loops, then a literal or an alternation), each with texts of its own built from its literal, its sets and characters of every width, in the shapes that ask where a match starts. See [start searches](#start-searchesjsonl). |
-| `captures.jsonl` | 8,457 | 306,315 | Not `test` but the rest of `RegExp`: where the match is and what each group captured (`exec`), the matches of a global search, the sticky flag, `replace` with every form of `$`, and `split`, for every pattern of `hand-written.jsonl`, `flags.jsonl` and `start-searches.jsonl` and one record in ten of each other file. See [captures](#capturesjsonl). |
-| `ill-formed-utf8.jsonl` | 8 | 1,440 | Bytes that are not UTF-8, each of the ill-formed sequences of Unicode's Table 3-7 in six places in a text, for an engine's UTF-8 interface, which must refuse them. A test is its bytes in hexadecimal. It has no answer of V8's. See [ill-formed UTF-8](#ill-formed-utf8jsonl). |
-| `manifest.json` | | | The versions of Node, V8 and Unicode the data was generated with, the counts of each file, for the families the limits and how many patterns they dropped, the overlays for other versions of Unicode (`unicode_overlays`), and the files of `exec` calls (`exec`). |
-| `unicode/18.0.jsonl` | | 9,115 answers | The answers that differ under Unicode 18.0, for an engine with that version's character database. Not a file of tests: an overlay on the others. See [other versions of Unicode](#other-versions-of-unicode). |
-| `spec/answers.jsonl` | | 660 answers | ECMA-262's answers where V8's recorded answer is wrong, on the records marked `v8_deviation`. Not a file of tests: answers to tests of the other files. See [the specification's answers](#the-specifications-answers-where-v8-departs). |
-| `exec/test262.jsonl` | 1,406 | 134,304 calls | Every call of `exec` that test262's regular expression tests make in a test V8 passes, with V8's result in full: where the match and each group are, the named groups, and `lastIndex` before and after. In a directory of its own, so that a runner that reads the files of `data/` does not take it for a file of records. See [the exec calls of test262](#exectest262jsonl). |
+| File | What is in it |
+|---|---|
+| `hand-written.jsonl` | Patterns written by hand to cover the grammar and the semantics: escapes, classes, quantifiers, groups, lookaround, backreferences, named groups, Unicode properties, case folding, the ECMAScript 2025 additions, and patterns found in real JSON schemas. Each is matched against 273 texts. |
+| `flags.jsonl` | 150 patterns, each with the flags `i`, `m`, `s` and `ims`, matched against the same 273 texts. They cover case-insensitive matching, multiline anchors and the dot. |
+| `generated.jsonl` | Patterns of 1 to 8 characters drawn at random from an alphabet of regular expression syntax. Most are not valid, which is the point: they test what a parser accepts and what it refuses. The first 4,000 are also matched against 80 short texts. |
+| `anchored-lists.jsonl` | Anchors and assertions inside lists, prefixes, suffixes, alternations and class sequences. Each is matched against 58 texts. See [the families](#the-families). |
+| `empty-loops.jsonl` | Counted groups whose body can match the empty string. Each is matched against 50 texts. |
+| `line-terminators.jsonl` | Anchors, the dot and classes against texts that begin, end or are broken by a line terminator. Each is matched against 100 texts. |
+| `word-boundaries.jsonl` | `\b` and `\B` at every place in short patterns. Each is matched against 271 texts, which include every text of up to three characters over a six-character alphabet. |
+| `backreferences.jsonl` | Backreferences to groups of repetitions, of alternatives and of optional groups, to groups that are never set, and from inside the group. Each is matched against 133 texts. |
+| `lookarounds.jsonl` | Groups that a lookahead or a lookbehind sets, read outside it or in the same repetition. Each is matched against about 130 texts, which include every text of up to four characters over its alphabet. |
+| `case-folding.jsonl` | Case-insensitive literals, classes and backreferences, with the `i` flag and in `(?i:` groups, against the characters whose case pairs host engines get wrong. The number of texts depends on the pattern. |
+| `code-units.jsonl` | Patterns that are valid only without the `u` flag, and so are matched by UTF-16 code unit, against texts with characters beyond the Basic Multilingual Plane. Each is matched against 105 texts. |
+| `lone-surrogates.jsonl` | The same kind of pattern against 46 texts that hold half of a surrogate pair. The texts are not valid Unicode, which is why they have a file of their own. |
+| `engine-faults.jsonl` | Patterns on which a host engine itself goes wrong, and syntax that host engines have and ECMA-262 has not. 628 of them are not valid. The others are matched against 116 texts. |
+| `unicode-sets.jsonl` | The `v` flag: nested classes, the difference and the intersection of classes, strings in classes and the properties of strings, with the `i` flag and without. Every record is answered with the `v` flag as well as with `u` and with neither, because the three grammars read a class differently. Each is matched against 150 texts. See [the families](#the-families). |
+| `test262.jsonl` | The patterns and texts of test262's regular expression tests, at the commit `manifest.json` names: every pattern a test builds or a syntax test refuses, and every text a test matches one against. A property escape test's text is the whole of a property, and is taken as the two ends of each of its ranges. See [the files from test262](#the-files-from-test262). |
+| `test262-lone-surrogates.jsonl` | The texts and patterns of `test262.jsonl` that hold half of a surrogate pair, as `lone-surrogates.jsonl` holds those of the families. |
+| `start-searches.jsonl` | Patterns made of what an engine's search for where a match can start reasons about (an assertion before one to three loops, then a literal or an alternation), each with texts of its own built from its literal, its sets and characters of every width, in the shapes that ask where a match starts. See [start searches](#start-searchesjsonl). |
+| `captures.jsonl` | Not `test` but the rest of `RegExp`: where the match is and what each group captured (`exec`), the matches of a global search, the sticky flag, `replace` with every form of `$`, and `split`, for every pattern of `hand-written.jsonl`, `flags.jsonl` and `start-searches.jsonl` and one record in ten of each other file. See [captures](#capturesjsonl). |
+| `ill-formed-utf8.jsonl` | Bytes that are not UTF-8, each of the ill-formed sequences of Unicode's Table 3-7 in six places in a text, for an engine's UTF-8 interface, which must refuse them. A test is its bytes in hexadecimal. It has no answer of V8's. See [ill-formed UTF-8](#ill-formed-utf8jsonl). |
+| `manifest.json` | The versions of Node, V8 and Unicode the data was generated with, the counts of each file, for the families the limits and how many patterns they dropped, the overlays for other versions of Unicode (`unicode_overlays`), and the files of `exec` calls (`exec`). |
+| `unicode/18.0.jsonl` | The answers that differ under Unicode 18.0, for an engine with that version's character database. Not a file of tests: an overlay on the others. See [other versions of Unicode](#other-versions-of-unicode). |
+| `spec/answers.jsonl` | ECMA-262's answers where V8's recorded answer is wrong, on the records marked `v8_deviation`. Not a file of tests: answers to tests of the other files. See [the specification's answers](#the-specifications-answers-where-v8-departs). |
+| `exec/test262.jsonl` | Every call of `exec` that test262's regular expression tests make in a test V8 passes, with V8's result in full: where the match and each group are, the named groups, and `lastIndex` before and after. In a directory of its own, so that a runner that reads the files of `data/` does not take it for a file of records. See [the exec calls of test262](#exectest262jsonl). |
+
+The counts of each file, and of each file's patterns by grammar, are in `manifest.json`.
 
 ## A record
 
