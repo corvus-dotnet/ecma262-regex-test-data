@@ -56,9 +56,10 @@ character is a `\uXXXX` escape, so no tool has to agree about an encoding.
 | `start-searches.jsonl` | Patterns made of what an engine's search for where a match can start reasons about (an assertion before one to three loops, then a literal or an alternation), each with texts of its own built from its literal, its sets and characters of every width, in the shapes that ask where a match starts. See [start searches](#start-searchesjsonl). |
 | `captures.jsonl` | Not `test` but the rest of `RegExp`: where the match is and what each group captured (`exec`), the matches of a global search, the sticky flag, `replace` with every form of `$`, and `split`, for every pattern of `hand-written.jsonl`, `flags.jsonl` and `start-searches.jsonl` and one record in ten of each other file. See [captures](#capturesjsonl). |
 | `ill-formed-utf8.jsonl` | Bytes that are not UTF-8, each of the ill-formed sequences of Unicode's Table 3-7 in six places in a text, for an engine's UTF-8 interface, which must refuse them. A test is its bytes in hexadecimal. It has no answer of V8's. See [ill-formed UTF-8](#ill-formed-utf8jsonl). |
-| `manifest.json` | The versions of Node, V8 and Unicode the data was generated with, the counts of each file, for the families the limits and how many patterns they dropped, the overlays for other versions of Unicode (`unicode_overlays`), and the files of `exec` calls (`exec`). |
+| `manifest.json` | The versions of Node, V8 and Unicode the data was generated with, the counts of each file, for the families the limits and how many patterns they dropped, the overlays for other versions of Unicode (`unicode_overlays`), the files of `exec` calls (`exec`), and the specification's answers (`spec_answers`, `spec_unstable`). |
 | `unicode/18.0.jsonl` | The answers that differ under Unicode 18.0, for an engine with that version's character database. Not a file of tests: an overlay on the others. See [other versions of Unicode](#other-versions-of-unicode). |
 | `spec/answers.jsonl` | ECMA-262's answers where V8's recorded answer is wrong, on the records marked `v8_deviation`. Not a file of tests: answers to tests of the other files. See [the specification's answers](#the-specifications-answers-where-v8-departs). |
+| `spec/unstable.jsonl` | The texts and ECMA-262's answers of the records V8 answers differently from one run to the next (marked `unstable`), which the files keep without tests. See [the specification's answers](#the-specifications-answers-where-v8-departs). |
 | `exec/test262.jsonl` | Every call of `exec` that test262's regular expression tests make in a test V8 passes, with V8's result in full: where the match and each group are, the named groups, and `lastIndex` before and after. In a directory of its own, so that a runner that reads the files of `data/` does not take it for a file of records. See [the exec calls of test262](#exectest262jsonl). |
 
 The counts of each file, and of each file's patterns by grammar, are in `manifest.json`.
@@ -92,7 +93,7 @@ The counts of each file, and of each file's patterns by grammar, are in `manifes
 | `valid.unicode_sets` | Only in `unicode-sets.jsonl`: whether `new RegExp(pattern, flags + "v")` succeeds. |
 | `tests[].unicode_sets` | Only in `unicode-sets.jsonl`: `RegExp.prototype.test` with the `v` flag. Present when `valid.unicode_sets` is true. |
 | `v8_deviation` | Present and true on the records where V8's answers are known to differ from the specification, or to change from run to run. See [where V8 departs from ECMA-262](#where-v8-departs-from-ecma-262). |
-| `deviation` | On a marked record of the later families and of the files from test262, the class of the deviation: `unstable`, `surrogate-pair-start`, `modifier-group`, `full-case-folding`, `single-character-string-case` or `ascii-case-folding`. An `unstable` record has no `tests`. |
+| `deviation` | On a marked record, the class of the deviation: `unstable`, `surrogate-pair-start`, `modifier-group`, `full-case-folding`, `single-character-string-case` or `ascii-case-folding`. An `unstable` record has no `tests`, but for `(?i:\Bs)` in `hand-written.jsonl`, whose answers are the specification's (V8's in a process that has compiled little). |
 | `tests[].bytes`, `tests[].case` | Only in `ill-formed-utf8.jsonl`, in place of a text and its answers: the bytes in hexadecimal, and which ill-formed sequence they hold, and where. |
 | `test262` | Only in the files from test262: the test files of test262 the pattern and its texts were taken from, as paths in that repository. |
 
@@ -696,11 +697,27 @@ which were settled from the text of ECMA-262, where engine262 has a second fault
   ([tc39/ecma262#128](https://github.com/tc39/ecma262/issues/128),
   [#2511](https://github.com/tc39/ecma262/issues/2511)). The text of ECMA-262 as it stands gives a match that starts
   after it ends.
-- The `unstable` records, which have no tests, and `(?i:\Bs)` in `hand-written.jsonl`, whose recorded answers are the
-  specification's although V8's change from one run to the next.
+- The `unstable` records, which are in `spec/unstable.jsonl` (below), and `(?i:\Bs)` in `hand-written.jsonl`, whose
+  recorded answers are the specification's although V8's change from one run to the next.
 
-`node spec-answers.js check` checks that every line fits the data, and the answers are made again when the data is
-regenerated.
+**The `unstable` records.** V8 answers these differently from one run to the next, so the files keep them without
+tests. `spec/unstable.jsonl` holds their texts, the ones the generator gives them (`DATASET_KEEP_UNSTABLE=1` keeps them
+in a data directory written for the purpose), with ECMA-262's answer under each grammar the pattern is valid in: one
+line for each record, with its place, its pattern and flags, its tests and the basis of the answers of each grammar,
+and one line for the test of `captures.jsonl` marked `unstable`, with its seven answers under each grammar.
+
+```json
+{"file": "case-folding.jsonl", "line": 2496, "pattern": "...", "flags": "", "deviation": "unstable", "basis": {"unicode": "engines and engine262", "legacy": "engines and engine262"}, "tests": [{"text": "s", "unicode": false, "legacy": false}]}
+```
+
+The answers were found as the ones above were: the data-set runners of Corvus.Regex.Ecma262 (.NET and Rust) and
+QuickJS-ng agree on every one, SRELL (in its two grammars) on every one, and regress on all but 21. engine262 gives the
+same answer for every one it can parse; it has no Annex B syntax, so the legacy grammar of `unicode-sets.jsonl`, where
+`\q{...}` is an identity escape, has the basis `engines`. A runner that judges the `unstable` records reads this file
+for their tests.
+
+`node spec-answers.js check` checks that every line of both files fits the data, and the answers are made again when
+the data is regenerated.
 
 ## Checking it
 
@@ -725,7 +742,7 @@ checks that every line of the overlays in `data/unicode/` fits the data.
 node spec-answers.js check
 ```
 
-checks that every line of `data/spec/answers.jsonl` fits the data.
+checks that every line of `data/spec/answers.jsonl` and `data/spec/unstable.jsonl` fits the data.
 
 ```sh
 node verify-test262-exec.js

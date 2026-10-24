@@ -143,7 +143,9 @@ function check(dir, name) {
 
     if ("deviation" in r) {
       if (r.v8_deviation !== true || typeof r.deviation !== "string") disagree(`${what} has a mark of the wrong shape`);
-      if (r.deviation === "unstable" && r.tests) disagree(`${what} is unstable and has tests`);
+      // (?i:\Bs) of hand-written.jsonl keeps its tests, whose answers are the specification's and are V8's in a
+      // process with one file to read; the unstable records of the later families have none.
+      if (r.deviation === "unstable" && r.tests && name !== "hand-written.jsonl") disagree(`${what} is unstable and has tests`);
       deviations[r.deviation] = (deviations[r.deviation] || 0) + 1;
     }
 

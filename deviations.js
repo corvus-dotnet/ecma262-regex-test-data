@@ -26,6 +26,10 @@
 //
 // The records of the last three classes keep V8's answers, as the marked records of hand-written.jsonl do. A
 // disagreement with reference.js that is none of these stops the run, so that nothing is marked without a reason.
+//
+// With DATASET_KEEP_UNSTABLE=1 an unstable record keeps its tests, with whatever V8 answered in that run: a data
+// directory written so has the texts of the unstable records, from which data/spec/unstable.jsonl is made (README.md,
+// "The specification's answers"). The data itself is never written so.
 'use strict';
 
 const { spawn } = require("child_process");
@@ -139,7 +143,7 @@ async function mark(family, records) {
     delete r.tests;
     r.v8_deviation = true;
     r.deviation = deviation;
-    if (tests && deviation !== "unstable") r.tests = tests;
+    if (tests && (deviation !== "unstable" || process.env.DATASET_KEEP_UNSTABLE === "1")) r.tests = tests;
   };
 
   const again = await Promise.all([cold(records), under([], "hot", records),
