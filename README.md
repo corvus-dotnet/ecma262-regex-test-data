@@ -91,7 +91,7 @@ The counts of each file, and of each file's patterns by grammar, are in `manifes
 | `tests[].legacy` | The same without the `u` flag. Present when `valid.legacy` is true. |
 | `valid.unicode_sets` | Only in `unicode-sets.jsonl`: whether `new RegExp(pattern, flags + "v")` succeeds. |
 | `tests[].unicode_sets` | Only in `unicode-sets.jsonl`: `RegExp.prototype.test` with the `v` flag. Present when `valid.unicode_sets` is true. |
-| `v8_deviation` | Present and true on 232 records where V8's answers are known to differ from the specification, or to change from run to run. See [where V8 departs from ECMA-262](#where-v8-departs-from-ecma-262). |
+| `v8_deviation` | Present and true on the records where V8's answers are known to differ from the specification, or to change from run to run. See [where V8 departs from ECMA-262](#where-v8-departs-from-ecma-262). |
 | `deviation` | On a marked record of the later families and of the files from test262, the class of the deviation: `unstable`, `surrogate-pair-start`, `modifier-group`, `full-case-folding`, `single-character-string-case` or `ascii-case-folding`. An `unstable` record has no `tests`. |
 | `tests[].bytes`, `tests[].case` | Only in `ill-formed-utf8.jsonl`, in place of a text and its answers: the bytes in hexadecimal, and which ill-formed sequence they hold, and where. |
 | `test262` | Only in the files from test262: the test files of test262 the pattern and its texts were taken from, as paths in that repository. |
@@ -384,7 +384,8 @@ that a test makes, whole, with V8's result:
 ```
 
 - `flags` are the flags the test built the RegExp with, `g`, `y` and `d` among them.
-- `lastIndex` is the value `exec` reads: 0 without `g` or `y`, where `exec` reads none.
+- `lastIndex` is the value `exec` reads: 0 without `g` or `y`, where `exec` reads none. It can lie past the end of
+  the text (test262 sets it as far as 2^53 - 1 and `Number.MAX_VALUE`), where `exec` gives null.
 - `answer` is `null` when `exec` gives null. Otherwise it gives the positions in UTF-16 code units of the match and of
   each group (`captures`, null for a group that took no part) and of each named group (`groups`), and, with `g` or
   `y`, the `lastIndex` that `exec` leaves. A null answer with `g` or `y` leaves `lastIndex` 0.
@@ -629,111 +630,74 @@ An overlay belongs to the data it was made for: when the data is regenerated, th
 
 ## Where V8 departs from ECMA-262
 
-The answers are V8's, and in six known classes of pattern V8 13.6 is wrong, or does not always say the same. A
-record of one of them is marked with `"v8_deviation": true`, and in the later families with a `deviation` that
-names the class. The answers of a marked record are still V8's. They should not be taken as the specification's. Where V8's answer is wrong, `spec/answers.jsonl` has the specification's (see
-[the specification's answers](#the-specifications-answers-where-v8-departs)).
+The answers are V8's, from Node 24.22.0 (V8 13.6). In six known kinds of pattern that V8 is wrong, or does not always
+give the same answer. Records of those kinds are marked `"v8_deviation": true`, with the kind in `deviation` (in
+`captures.jsonl` the mark is on the test). Runners skip them, and where V8's answer is wrong `spec/answers.jsonl` has
+the specification's (see [the specification's answers](#the-specifications-answers-where-v8-departs)).
 
-| Class | Records | What V8 does | Smallest example |
+| Kind | In | What V8 does | Smallest example |
 |---|---|---|---|
-| `modifier-group` | 6 in `hand-written.jsonl`, 22 in `case-folding.jsonl` | A case-insensitive modifier group is answered differently from the same pattern with the `i` flag, which ECMA-262 does not allow. | `^(?i:\u212a)$` with the `u` flag does not match `k`. `^\u212a$` with `iu` does. |
-| `unstable` | 18 in `case-folding.jsonl`, 13 in `unicode-sets.jsonl`, 2 in `test262.jsonl` | The answer depends on how V8 compiled the pattern, and so changes from one run to the next. All 33 have a case-insensitive modifier group, and the 13 of `unicode-sets.jsonl` a class with strings in it. The records have no `tests`. | `(?i:\Bs)` with the `u` flag on `s` and a long s (U+017F). False at first, true once V8 has switched its optimising compiler off. |
-| `surrogate-pair-start` | 2 in `code-units.jsonl`, 2 in `lone-surrogates.jsonl`, 1 in `case-folding.jsonl` | With the `u` flag a match starts between the two halves of a surrogate pair. ECMA-262 moves from one start to the next a code point at a time. | `/(?<!^.*)/u.exec("\u{10428}")` has index 1. So has `/\B/u.exec("a\u{10428}a")`, at index 2. Both should be null. |
-| `full-case-folding` | 6 in `case-folding.jsonl` | With the `i` and `u` flags a backreference is compared with the text by full case folding of the whole string. ECMA-262 compares one character at a time through Canonicalize, which is simple case folding. | `^(..)\1$` with `iu` matches the four characters sharp s, `S`, `s`, capital sharp s. `^(.)(.)\1\2$` does not. |
-| `single-character-string-case` | 136 in `unicode-sets.jsonl` | With the `i` and `v` flags a string of one character in `\q{...}` is not canonicalized against the text: `[\q{k}]` does not match `K`, where `[k]` does. ECMA-262 makes such a string a character of the class. | `^(?i:[\q{k}])$` |
-| `ascii-case-folding` | 24 in `unicode-sets.jsonl` | With the `i` and `v` flags `\p{ASCII}` is folded without the long s and the Kelvin sign, which fold to `s` and `k`, where the same range written out, `[\u0000-\u007f]`, is folded with them. ECMA-262 folds the two alike. | `[\p{ASCII}]` with `i` on the long s |
+| `modifier-group` | `hand-written.jsonl`, `case-folding.jsonl` | A case-insensitive modifier group is answered differently from the same pattern with the `i` flag. | `^(?i:\u212a)$` with `u` does not match `k`; `^\u212a$` with `iu` does. |
+| `unstable` | `case-folding.jsonl`, `unicode-sets.jsonl`, `test262.jsonl` | The answer depends on how V8 compiled the pattern, so it changes from one run to the next. These records have no tests. | `(?i:\Bs)` with `u` on a long s: false at first, true once V8 stops optimising. |
+| `surrogate-pair-start` | `code-units.jsonl`, `lone-surrogates.jsonl`, `case-folding.jsonl`, `captures.jsonl` | With `u`, a match starts between the two halves of a surrogate pair. | `/(?<!^.*)/u.exec("\u{10428}")` has index 1; it should be null. |
+| `full-case-folding` | `case-folding.jsonl` | With `iu`, a backreference is compared by full case folding; ECMA-262 compares one character at a time by simple case folding. | `^(..)\1$` with `iu` matches sharp s, `S`, `s`, capital sharp s. |
+| `single-character-string-case` | `unicode-sets.jsonl` | With `iv`, a one-character string in `\q{...}` is not case folded, though ECMA-262 makes it a character of the class. | `^(?i:[\q{k}])$` does not match `K`. |
+| `ascii-case-folding` | `unicode-sets.jsonl` | With `iv`, `\p{ASCII}` is folded without the long s and the Kelvin sign, unlike the same range written out. | `[\p{ASCII}]` with `iv` does not match a long s. |
 
-The six marked records of `hand-written.jsonl` have no `deviation` field. One of them, `(?i:\Bs)`, is unstable as
-well, and so is `(?i:\bk\b)` in the same file, which is not marked. `flags.jsonl` covers what the modifier groups
-of those records say through the flags, where V8 is right.
+V8 has since fixed all six in its own source (between August and October 2026), but no Node release carries the
+fixes yet: the newest, 26.12.1 with V8 14.6, still gives these answers. When a Node release does, the data moves to
+it, and most of these marks go. The number of marked records in each file is in `manifest.json`.
 
-A record with a case-insensitive modifier group and a multi-character backreference is counted as
-`modifier-group`, whichever of the two is the cause.
+**How they are found.** `deviations.js` checks every record of the later families, and `test262.js` those of test262:
 
-How they are found. `deviations.js` looks at every record of the seven later families.
+- `unstable`: each record is answered again four ways (in a fresh process, after 48 MB of other patterns have been
+  compiled, with `--no-regexp-optimization`, with `--regexp-interpret-all`), and any difference marks it.
+- `surrogate-pair-start`: the pattern is tried with `y` from every start ECMA-262 allows; a match V8 finds and none of
+  those does marks it.
+- `modifier-group` and `full-case-folding`: `reference.js`, a matcher written from the text of ECMA-262 that asks V8
+  only what one character matches, answers every record of `case-folding.jsonl`; a record where the two disagree is
+  marked by the shape of its pattern. Any other disagreement stops the generator.
+- `single-character-string-case` and `ascii-case-folding`: the pattern is rewritten into a form ECMA-262 makes the
+  same (each one-character `\q{x}` as `x`, `\p{ASCII}` as `[\u0000-\u007f]`) and asked again; a change marks it.
 
-- **Unstable.** V8 compiles a regular expression in more than one way. It interprets it at first and compiles it
-  to machine code when it is used again, and it compiles differently once the process holds about 16 MB of
-  compiled code. Each record is answered again in four ways. In processes that have compiled little. In a process
-  that has first compiled 48 MB of other patterns. With `--no-regexp-optimization`. With
-  `--regexp-interpret-all`. A record with an answer that differs in any of them is marked and loses its tests.
-  No record of the other five families of `more-families.js` differs.
-- **Surrogate pair start.** For each text with a surrogate pair, the pattern is tried with the `y` flag from each
-  start that ECMA-262 allows. A record is marked when that finds no match and V8's own search finds one.
-- **Modifier group and full case folding.** `reference.js` is a matcher written from the text of ECMA-262. It asks
-  V8 what one character matches, and does the rest itself: the order of the search, the repetitions, the groups,
-  the backreferences and the assertions. Every record of `case-folding.jsonl` is answered by it as well, with the
-  `u` flag and without it. A record on which it disagrees with V8 is marked `modifier-group` when the pattern has
-  a case-insensitive modifier group, and `full-case-folding` when it has the `i` flag and a backreference. Any
-  other disagreement stops the generator, and there is none.
-- **Single-character strings, and the folding of `\p{ASCII}`.** `reference.js` does not read the `v` flag's
-  grammar. `unicode-sets.js` finds these two classes itself, by rewriting: a record with the `i` flag or a
-  case-insensitive modifier group has every string of one character in a `\q{...}` written as a character of the
-  class instead, which is what ECMA-262 makes of it, and `\p{ASCII}` written as the range `[\u0000-\u007f]`, and V8
-  is asked again. A record whose answers change is marked with the class of the rewriting that changed them.
-
-`reference.js` is not the oracle, and it is not asked about the other files when they are generated. It was run
-over them once as a check, and the numbers of that run are in the section on checking.
+The six marked records of `hand-written.jsonl` were marked by hand, as `modifier-group`, without a `deviation` field.
 
 ## The specification's answers where V8 departs
 
-`spec/answers.jsonl` holds ECMA-262's answer for each test of a marked record (`v8_deviation`) where V8's recorded
-answer is wrong: 660 answers, to 651 tests of 183 records. Each is one JSON line, in the form of the overlays for
-other versions of Unicode, with the class of the deviation and how the answer was established:
+`spec/answers.jsonl` holds ECMA-262's answer for each test of a marked record where V8's answer is wrong, one JSON line
+each, in the form of the overlays for other versions of Unicode, with the kind of departure and how the answer was
+established:
 
 ```json
 {"file": "unicode-sets.jsonl", "line": 5194, "grammar": "unicode_sets", "test": 0, "answer": false, "deviation": "single-character-string-case", "basis": "engines and engine262"}
 ```
 
-| Class | Answers | Records |
-|---|---|---|
-| `single-character-string-case` | 247 | 133 |
-| `surrogate-pair-start` | 159 | 6 (one of them in `captures.jsonl`) |
-| `modifier-group` | 130 | 27 |
-| `full-case-folding` | 102 | 6 |
-| `ascii-case-folding` | 20 | 10 |
-| `unstable` | 2 | 1 test of `captures.jsonl`, which had no answers before |
+The records stay marked, so a runner that skips them is not affected. A runner that judges them takes this file's
+answer where it has one, and the record's answer otherwise: on every other test of a marked record, V8's answer is the
+specification's.
 
-The records stay marked, and a runner that skips them as before is not affected. A runner that judges them takes the
-answer of this file where it has one, and the record's answer otherwise: on every other test of a marked record V8's
-answer is the specification's.
-
-**How the answers were found.** The marked records, with their marks removed, were given to the data-set runners of
-the Corvus regular expression engines (the .NET and the Rust one), QuickJS-ng 0.17, SRELL 2026.07 and regress 0.12,
-each judging its engine against V8's answers. Wherever the Corvus engines and QuickJS-ng departed from V8 they gave
-the same answer, 737 answers in all counting each operation of a `captures.jsonl` test once; SRELL gave the same
-wherever it was asked (it has no legacy grammar), and regress on all but 56 of them. Each of those answers was then
-asked of engine262, a JavaScript engine written to the text of ECMA-262, at `main` (d553e7b): with one line of it
-corrected ([engine262#378](https://github.com/engine262/engine262/issues/378), the complement of a class under the
-`v` and `i` flags), it gives the same answer for all but 3. Those 3 (`[^\q{A}]` and `[^\q{\u212A}]` with `iv`) were
-settled from the text of ECMA-262 (MaybeSimpleCaseFolding folds the string of `\q{...}`, so the complement leaves out
-`a` and `k`), where engine262 has a second fault ([engine262#379](https://github.com/engine262/engine262/issues/379)).
-The `basis` of each line says which.
+**How the answers were found.** The marked records, unmarked, were given to the data-set runners of the Corvus engines
+(.NET and Rust), QuickJS-ng, SRELL and regress. Each answer here is one where those engines agreed against V8 (SRELL has
+no legacy grammar, and regress disagrees with the others on some). Every one was then asked of engine262, a
+JavaScript engine written to the text of ECMA-262, with one of its faults corrected
+([engine262#378](https://github.com/engine262/engine262/issues/378)): it gives the same answer for all but three,
+which were settled from the text of ECMA-262, where engine262 has a second fault
+([engine262#379](https://github.com/engine262/engine262/issues/379)). The `basis` of each line says which.
 
 **What is not in it.**
 
-- 31 answers that depend on [tc39/ecma262#4006](https://github.com/tc39/ecma262/issues/4006): a lone General_Category
-  value such as `\p{Lu}` in a set operation under the `v` and `i` flags, which the text of ECMA-262 does not case-fold
-  while it folds `\p{gc=Lu}`. The engines above fold both, and so does engine262. They are held until that issue is
-  decided; 17 records have no other answer that V8 gets wrong, and so no line here yet.
-- The sticky answers of the six `surrogate-pair-start` tests of `captures.jsonl` with `lastIndex` 1 inside a surrogate
-  pair. There V8's answer is the one intended: matching starts at the code point that holds `lastIndex`
+- The answers that depend on [tc39/ecma262#4006](https://github.com/tc39/ecma262/issues/4006), held until it is
+  decided: a lone General_Category value such as `\p{Lu}` in a set operation under `v` and `i`, which the text of
+  ECMA-262 does not case-fold while it folds `\p{gc=Lu}`. The engines above, and engine262, fold both.
+- The sticky answers of the `surrogate-pair-start` tests of `captures.jsonl`, where `lastIndex` is inside a surrogate
+  pair. V8's answer is the one intended there: matching starts at the code point that holds `lastIndex`
   ([tc39/ecma262#128](https://github.com/tc39/ecma262/issues/128),
   [#2511](https://github.com/tc39/ecma262/issues/2511)). The text of ECMA-262 as it stands gives a match that starts
-  after it ends there, and engine262 fails an assertion of the specification on it.
-- The 33 `unstable` records, which have no tests, and `(?i:\Bs)` in `hand-written.jsonl`, whose recorded answers are
-  the specification's although V8's change from one run to the next.
+  after it ends.
+- The `unstable` records, which have no tests, and `(?i:\Bs)` in `hand-written.jsonl`, whose recorded answers are the
+  specification's although V8's change from one run to the next.
 
-**V8 since.** Every class has been corrected in V8: the modifier groups and the unstable answers by the redesign of
-how a pattern's flags are kept ([8260876](https://chromium-review.googlesource.com/c/v8/v8/+/8260876), V8 15.4;
-[nodejs/node#66277](https://github.com/nodejs/node/issues/66277)), the backreferences under `iu`
-([8423859](https://chromium-review.googlesource.com/c/v8/v8/+/8423859)), single characters in `\q{...}`
-([8549637](https://chromium-review.googlesource.com/c/v8/v8/+/8549637)) and `\p{ASCII}`
-([8641470](https://chromium-review.googlesource.com/c/v8/v8/+/8641470)). V8 15.8.45 gives the specification's answer
-on every one of the 660 but the 20 of `ascii-case-folding`, which the last of those changes, made after that release, is to correct.
-
-`node spec-answers.js check` checks that every line fits the data: the record or test is marked, the test exists, and
-the answer differs from V8's. The answers belong to the data they were made for, and are made again when it is
+`node spec-answers.js check` checks that every line fits the data, and the answers are made again when the data is
 regenerated.
 
 ## Checking it
