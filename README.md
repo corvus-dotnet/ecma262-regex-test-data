@@ -57,7 +57,7 @@ character is a `\uXXXX` escape, so no tool has to agree about an encoding.
 | `captures.jsonl` | Not `test` but the rest of `RegExp`: where the match is and what each group captured (`exec`), the matches of a global search, the sticky flag, `replace` with every form of `$`, and `split`, for every pattern of `hand-written.jsonl`, `flags.jsonl` and `start-searches.jsonl` and one record in ten of each other file. See [captures](#capturesjsonl). |
 | `ill-formed-utf8.jsonl` | Bytes that are not UTF-8, each of the ill-formed sequences of Unicode's Table 3-7 in six places in a text, for an engine's UTF-8 interface, which must refuse them. A test is its bytes in hexadecimal. It has no answer of V8's. See [ill-formed UTF-8](#ill-formed-utf8jsonl). |
 | `manifest.json` | The versions of Node, V8 and Unicode the data was generated with, the counts of each file, for the families the limits and how many patterns they dropped, the overlays for other versions of Unicode (`unicode_overlays`), the files of `exec` calls (`exec`), and the specification's answers (`spec_answers`, `spec_unstable`). |
-| `unicode/18.0.jsonl` | The answers that differ under Unicode 18.0, for an engine with that version's character database. Not a file of tests: an overlay on the others. See [other versions of Unicode](#other-versions-of-unicode). |
+| `unicode/13.0.jsonl`, `unicode/18.0.jsonl` | The answers and validities that differ under Unicode 13.0 and 18.0, for an engine with that version's character database. Not files of tests: overlays on the others. See [other versions of Unicode](#other-versions-of-unicode). |
 | `spec/answers.jsonl` | ECMA-262's answers where V8's recorded answer is wrong, on the records marked `v8_deviation`. Not a file of tests: answers to tests of the other files. See [the specification's answers](#the-specifications-answers-where-v8-departs). |
 | `spec/unstable.jsonl` | The texts and ECMA-262's answers of the records V8 answers differently from one run to the next (marked `unstable`), which the files keep without tests. See [the specification's answers](#the-specifications-answers-where-v8-departs). |
 | `exec/test262.jsonl` | Every call of `exec` that test262's regular expression tests make in a test V8 passes, with V8's result in full: where the match and each group are, the named groups, and `lastIndex` before and after. In a directory of its own, so that a runner that reads the files of `data/` does not take it for a file of records. See [the exec calls of test262](#exectest262jsonl). |
@@ -593,9 +593,9 @@ every answer and every validity that differs under another version than V8's, on
 
 `line` counts the lines of the file from 1 and `test` the record's tests from 0; an answer has the shape the file's
 answers have. A line for `exec/test262.jsonl` names the one grammar the record's flags give and replaces the call's
-`answer`; no call depends on the version yet, so 18.0 has none. `node unicode.js apply <version> <dir>` writes the
-data with an overlay applied (the files at the top, `manifest.json` and `exec/test262.jsonl`), which a runner reads in
-place of `data/`; the number of answers is the same, and only some of them differ. `node unicode.js check` checks
+`answer` (13.0 changes six calls, 18.0 none). `node unicode.js apply <version> <dir>` writes the data with an overlay
+applied (the files at the top, `manifest.json` and `exec/test262.jsonl`), which a runner reads in place of `data/`.
+Some answers differ, and a pattern the overlay makes invalid has no answers in that grammar. `node unicode.js check` checks
 that every line of every overlay fits the data, so an overlay made for other data cannot go stale unnoticed.
 
 **How an overlay is made.** No V8 has a later version than 17.0 yet, so another engine answers for it, one whose
@@ -614,6 +614,20 @@ For 18.0:
 4. Judged both ways, the 18.0 engine on V8's answers and the 17.0 engine on the overlaid answers give the same
    18,495 wrong answers.
 
+For 13.0, the same chain run on UCD 13.0.0 (its emoji sequence files are those of Emoji 13.0):
+
+1. Built with the 13.0 tables, the runner writes the 66,400 lines of `unicode/13.0.jsonl`: 64,805 answers and 1,595
+   validities. The validities are the patterns that name a property value Unicode 13.0 does not have, such as a later
+   script: 272 of `test262.jsonl` and 272 of `test262-lone-surrogates.jsonl`, each under `u` and under `v`, and 507
+   of `captures.jsonl` under `u`. Judged on the data with the overlay applied, the 13.0 engine gives no wrong answer.
+2. V8 had Unicode 13.0 too, in Node 16.0.0 (V8 9.0.257.17, ICU 69.1), which checks the overlay independently, under
+   `u` (it has no `v` flag). Asked every `u` answer of every record of a file of tests that the overlay touches, with
+   the overlay applied, it agrees on 528,289 of 528,430, and it refuses every pattern the overlay refuses. The 141
+   others are each to a text with U+0390, U+03B0, U+FB05 or U+FB06, which Unicode 13.0's `CaseFolding.txt` gives no
+   simple case folding to the letter they fold to under 17.0 (it gives them full folding only, and ECMA-262 folds by
+   the simple folding), and which V8 9.0's case closure takes from the full folding. It cannot compile the 70 records
+   with modifier groups, which it predates. `captures.jsonl`'s answers are exec results, which this check leaves out.
+
 An overlay belongs to the data it was made for: when the data is regenerated, the overlays are made again.
 
 ## What to know before relying on it
@@ -624,7 +638,7 @@ An overlay belongs to the data it was made for: when the data is regenerated, th
   `"v8_deviation": true`. See the next section.
 - **Unicode 17.** V8 13.6.233.17 has the Unicode 17.0 character database, as test262 has. An engine with another
   version answers otherwise on the characters whose properties differ, in `\p{...}` and in case folding. For the
-  versions an overlay exists for (18.0 so far), the answers of that version are in `data/unicode/`.
+  versions an overlay exists for (13.0 and 18.0), the answers of that version are in `data/unicode/`.
 - **No `v` flag in the first files.** Set notation and properties of strings are covered by `unicode-sets.jsonl`
   and the files from test262 only.
 - **Whole-text answers, for the most part.** A test of the files of records says whether the pattern matches

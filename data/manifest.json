@@ -249,6 +249,13 @@
   ],
   "unicode_overlays": [
     {
+      "unicode": "13.0",
+      "file": "unicode/13.0.jsonl",
+      "answers": 64805,
+      "validities": 1595,
+      "made_with": "the Corvus.Regex.Ecma262 data-set runner (--answers) built with Unicode 13.0.0 tables from regress's gen-unicode (0.12.0); checked against V8 9.0.257.17 in Node 16.0.0, whose ICU 69.1 has Unicode 13.0, on every answer and validity of the unicode grammar outside captures.jsonl's answers: it agrees on all but 141 answers, each to a text with U+0390, U+03B0, U+FB05 or U+FB06, whose simple case folding Unicode 13.0 does not have and V8 9.0's case closure takes from the full folding, and it cannot compile the 70 records with modifier groups, which it predates"
+    },
+    {
       "unicode": "18.0",
       "file": "unicode/18.0.jsonl",
       "answers": 9115,
