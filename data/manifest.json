@@ -276,5 +276,13 @@
         "calls": 135390
       }
     }
-  ]
+  ],
+  "spec_unstable": {
+    "file": "spec/unstable.jsonl",
+    "records": 33,
+    "capture_tests": 1,
+    "texts": 4849,
+    "answers": 8128,
+    "made_with": "the texts the generator gives the unstable records (DATASET_KEEP_UNSTABLE=1), answered by the data-set runners of Corvus.Regex.Ecma262 (.NET and Rust) and QuickJS-ng 0.17, which agree on every answer, with SRELL 2026.07 and regress 0.12 asked too, checked against engine262 (main at d553e7b, with engine262#378 fixed), which agrees wherever it parses the pattern (it has no Annex B syntax, so not the legacy grammar of unicode-sets.jsonl)"
+  }
 }
