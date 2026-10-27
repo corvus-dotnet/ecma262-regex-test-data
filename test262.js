@@ -3,9 +3,8 @@
 //
 //   node test262.js <test262 checkout> [output directory, default ./data]
 //
-// It needs a Node whose V8 has test262's Unicode, 17 (Node 24.22.0 has it; the rest of the data was written with
-// 24.11.0, whose Unicode is 16, and gives the same answers under 24.22.0 but on its unstable records), and a checkout of
-// test262 at the commit manifest.json names for these files (or another, to take in a later test262). It writes NOTICE-test262.md beside
+// It needs a Node whose V8 has test262's Unicode, 17 (Node 24.22.1 has it, the Node the whole data is written with), and
+// a checkout of test262 at the commit manifest.json names for these files (or another, to take in a later test262). It writes NOTICE-test262.md beside
 // this script, with test262's licence and the copyright lines of every test file a record was taken from.
 //
 // test262 is the source of the patterns and the texts, not of the answers. Each test of its regular expression
@@ -27,7 +26,7 @@
 // the class has is kept, and matches alone, and so is the join of those it has not; a string it has not is a text
 // with no answer of test262's, since it may match as several of the class's strings. Any difference stops the run,
 // and so does a pattern that a test shows V8 accepting, or a negative syntax test shows it refusing, where V8 answers
-// otherwise now. test262 has Unicode 17, so the Node must have it too (Node 24.22.0 has, with V8 13.6.233.17; Node
+// otherwise now. test262 has Unicode 17, so the Node must have it too (Node 24.22.1 has, with V8 13.6.233.17; Node
 // 24.11.0 had Unicode 16, and V8 then differed from test262 on 7,216 answers).
 //
 // The records are then searched for the deviations of the later families (deviations.js), and the matcher of
@@ -366,7 +365,7 @@ if (require.main === module) (async () => {
     dropped_for_backtracks: overBudget.length, dropped_for_time: overTime.length,
   });
   for (const e of written) {
-    // The Node that answered: test262 has Unicode 17, and so must V8 (Node 24.22.0 has it; 24.11.0 had Unicode 16).
+    // The Node that answered: test262 has Unicode 17, and so must V8 (Node 24.22.1 has it; 24.11.0 had Unicode 16).
     e.node = process.version;
     e.v8 = process.versions.v8;
     e.unicode = process.versions.unicode;

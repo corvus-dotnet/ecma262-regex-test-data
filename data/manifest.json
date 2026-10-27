@@ -1,6 +1,6 @@
 {
-  "node": "v24.22.0",
-  "v8": "13.6.233.17-node.57",
+  "node": "v24.22.1",
+  "v8": "13.6.233.17-node.58",
   "unicode": "17.0",
   "backtrack_budget": 250000,
   "time_limit_ms": 250,
@@ -192,8 +192,8 @@
         "surrogate-pair-start": 16,
         "unstable": 1
       },
-      "node": "v24.22.0",
-      "v8": "13.6.233.17-node.57"
+      "node": "v24.22.1",
+      "v8": "13.6.233.17-node.58"
     },
     {
       "file": "ill-formed-utf8.jsonl",
@@ -218,8 +218,8 @@
       "candidates": 5559,
       "dropped_for_backtracks": 0,
       "dropped_for_time": 0,
-      "node": "v24.22.0",
-      "v8": "13.6.233.17-node.57",
+      "node": "v24.22.1",
+      "v8": "13.6.233.17-node.58",
       "unicode": "17.0",
       "test262": {
         "repository": "https://github.com/tc39/test262",
@@ -237,8 +237,8 @@
       "valid_unicode_sets": 3449,
       "valid_unicode_sets_only": 0,
       "v8_deviations": {},
-      "node": "v24.22.0",
-      "v8": "13.6.233.17-node.57",
+      "node": "v24.22.1",
+      "v8": "13.6.233.17-node.58",
       "unicode": "17.0",
       "test262": {
         "repository": "https://github.com/tc39/test262",
@@ -249,6 +249,13 @@
   ],
   "unicode_overlays": [
     {
+      "unicode": "13.0",
+      "file": "unicode/13.0.jsonl",
+      "answers": 64805,
+      "validities": 1595,
+      "made_with": "the Corvus.Regex.Ecma262 data-set runner (--answers) built with Unicode 13.0.0 tables from regress's gen-unicode (0.12.0); checked against V8 9.0.257.17 in Node 16.0.0, whose ICU 69.1 has Unicode 13.0, on every answer and validity of the unicode grammar outside captures.jsonl's answers: it agrees on all but 141 answers, each to a text with U+0390, U+03B0, U+FB05 or U+FB06, whose simple case folding Unicode 13.0 does not have and V8 9.0's case closure takes from the full folding, and it cannot compile the 70 records with modifier groups, which it predates"
+    },
+    {
       "unicode": "18.0",
       "file": "unicode/18.0.jsonl",
       "answers": 9115,
@@ -256,11 +263,28 @@
       "made_with": "the Corvus.Regex.Ecma262 data-set runner (--answers) built with Unicode 18.0.0 tables from regress's gen-unicode; checked against SRELL 2026.07"
     }
   ],
+  "edition_overlays": [
+    {
+      "edition": "es2020",
+      "file": "edition/es2020.jsonl",
+      "validities": 6324,
+      "exec_refused": 189,
+      "made_with": "edition.js make, with V8 13.6.233.17-node.58 in Node v24.22.1 under --no-js-regexp-modifiers --no-js-regexp-duplicate-named-groups, and es2020-properties.json (the edition's tables of Unicode property names and values)"
+    }
+  ],
   "spec_answers": {
     "file": "spec/answers.jsonl",
     "answers": 660,
     "held": 31,
     "made_with": "the Corvus.Regex.Ecma262 data-set runner (--answers) where QuickJS-ng 0.17, SRELL 2026.07 and regress 0.12 were asked too, checked against engine262 (main at d553e7b, with engine262#378 fixed) and the text of ECMA-262; 31 answers that depend on tc39/ecma262#4006 are held"
+  },
+  "spec_unstable": {
+    "file": "spec/unstable.jsonl",
+    "records": 33,
+    "capture_tests": 1,
+    "texts": 4849,
+    "answers": 8128,
+    "made_with": "the texts the generator gives the unstable records (DATASET_KEEP_UNSTABLE=1), answered by the data-set runners of Corvus.Regex.Ecma262 (.NET and Rust) and QuickJS-ng 0.17, which agree on every answer, with SRELL 2026.07 and regress 0.12 asked too, checked against engine262 (main at d553e7b, with engine262#378 fixed), which agrees wherever it parses the pattern (it has no Annex B syntax, so not the legacy grammar of unicode-sets.jsonl)"
   },
   "exec": [
     {
@@ -276,13 +300,5 @@
         "calls": 135390
       }
     }
-  ],
-  "spec_unstable": {
-    "file": "spec/unstable.jsonl",
-    "records": 33,
-    "capture_tests": 1,
-    "texts": 4849,
-    "answers": 8128,
-    "made_with": "the texts the generator gives the unstable records (DATASET_KEEP_UNSTABLE=1), answered by the data-set runners of Corvus.Regex.Ecma262 (.NET and Rust) and QuickJS-ng 0.17, which agree on every answer, with SRELL 2026.07 and regress 0.12 asked too, checked against engine262 (main at d553e7b, with engine262#378 fixed), which agrees wherever it parses the pattern (it has no Annex B syntax, so not the legacy grammar of unicode-sets.jsonl)"
-  }
+  ]
 }
