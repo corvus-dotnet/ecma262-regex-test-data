@@ -58,6 +58,7 @@ character is a `\uXXXX` escape, so no tool has to agree about an encoding.
 | `ill-formed-utf8.jsonl` | Bytes that are not UTF-8, each of the ill-formed sequences of Unicode's Table 3-7 in six places in a text, for an engine's UTF-8 interface, which must refuse them. A test is its bytes in hexadecimal. It has no answer of V8's. See [ill-formed UTF-8](#ill-formed-utf8jsonl). |
 | `manifest.json` | The versions of Node, V8 and Unicode the data was generated with, the counts of each file, for the families the limits and how many patterns they dropped, the overlays for other versions of Unicode (`unicode_overlays`), the files of `exec` calls (`exec`), and the specification's answers (`spec_answers`, `spec_unstable`). |
 | `unicode/13.0.jsonl`, `unicode/18.0.jsonl` | The answers and validities that differ under Unicode 13.0 and 18.0, for an engine with that version's character database. Not files of tests: overlays on the others. See [other versions of Unicode](#other-versions-of-unicode). |
+| `edition/es2020.jsonl` | The validities that differ under the grammar of ECMAScript 2020 (ECMA-262, 11th edition), which JSON Schema 2020-12 names. Not a file of tests: an overlay on the others. See [the ECMAScript 2020 grammar](#the-ecmascript-2020-grammar). |
 | `spec/answers.jsonl` | ECMA-262's answers where V8's recorded answer is wrong, on the records marked `v8_deviation`. Not a file of tests: answers to tests of the other files. See [the specification's answers](#the-specifications-answers-where-v8-departs). |
 | `spec/unstable.jsonl` | The texts and ECMA-262's answers of the records V8 answers differently from one run to the next (marked `unstable`), which the files keep without tests. See [the specification's answers](#the-specifications-answers-where-v8-departs). |
 | `exec/test262.jsonl` | Every call of `exec` that test262's regular expression tests make in a test V8 passes, with V8's result in full: where the match and each group are, the named groups, and `lastIndex` before and after. In a directory of its own, so that a runner that reads the files of `data/` does not take it for a file of records. See [the exec calls of test262](#exectest262jsonl). |
@@ -630,6 +631,37 @@ For 13.0, the same chain run on UCD 13.0.0 (its emoji sequence files are those o
 
 An overlay belongs to the data it was made for: when the data is regenerated, the overlays are made again.
 
+## The ECMAScript 2020 grammar
+
+JSON Schema 2020-12 says a pattern should be valid in the dialect of ECMA-262, 11th edition (ECMAScript 2020). That
+grammar refuses what ECMAScript added to regular expressions after its 11th edition, and nothing else:
+
+- the `d` flag (2022) and the `v` flag (2024);
+- modifier groups, such as `(?i:...)` (2025);
+- a group name used by two groups, even in separate alternatives (2025);
+- under the `u` flag, a property name or value that is not in the edition's tables, such as a later script
+  (`Script=Chorasmian`, Unicode 13) or a later binary property. The tables are in `es2020-properties.json`, taken from
+  the edition's source.
+
+Every answer to a pattern it accepts is today's. So `data/edition/es2020.jsonl` holds validities only:
+
+```json
+{"file": "test262.jsonl", "line": 1234, "grammar": "unicode", "valid": false}
+{"file": "exec/test262.jsonl", "line": 56, "refused": true}
+```
+
+A line of `exec/test262.jsonl` is a call whose pattern or flags the grammar refuses. The `v` flag's grammar is
+refused as a whole, so it has no lines.
+
+- **How it is made.** No V8 has a 2020 mode, so `node edition.js make` derives the overlay from the rules above. V8
+  13.6 judges modifier groups and duplicate group names with both turned off (`--no-js-regexp-modifiers` and
+  `--no-js-regexp-duplicate-named-groups`). The property names under `u` are read against the edition's tables.
+- **How it is applied.** `node edition.js apply <dir> [unicode version]` writes the data as an engine of the 2020
+  grammar is judged by it: every record's `unicode_sets` grammar refused, the overlay's validities applied (a refused
+  grammar's answers dropped), and the overlay's calls left out. With a Unicode version, that version's overlay is
+  applied first.
+- **How it is checked.** `node edition.js check` makes the overlay again and fails unless the file is the same.
+
 ## What to know before relying on it
 
 - **It records one implementation.** The answers are V8's (13.6.233.17, in Node 24.22.1), not the specification's. For the
@@ -639,6 +671,8 @@ An overlay belongs to the data it was made for: when the data is regenerated, th
 - **Unicode 17.** V8 13.6.233.17 has the Unicode 17.0 character database, as test262 has. An engine with another
   version answers otherwise on the characters whose properties differ, in `\p{...}` and in case folding. For the
   versions an overlay exists for (13.0 and 18.0), the answers of that version are in `data/unicode/`.
+- **Today's grammar.** The answers are to today's grammar. For the grammar of ECMAScript 2020, which JSON Schema
+  2020-12 names, the overlay in `data/edition/` refuses what later editions added.
 - **No `v` flag in the first files.** Set notation and properties of strings are covered by `unicode-sets.jsonl`
   and the files from test262 only.
 - **Whole-text answers, for the most part.** A test of the files of records says whether the pattern matches

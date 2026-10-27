@@ -263,6 +263,15 @@
       "made_with": "the Corvus.Regex.Ecma262 data-set runner (--answers) built with Unicode 18.0.0 tables from regress's gen-unicode; checked against SRELL 2026.07"
     }
   ],
+  "edition_overlays": [
+    {
+      "edition": "es2020",
+      "file": "edition/es2020.jsonl",
+      "validities": 6324,
+      "exec_refused": 189,
+      "made_with": "edition.js make, with V8 13.6.233.17-node.58 in Node v24.22.1 under --no-js-regexp-modifiers --no-js-regexp-duplicate-named-groups, and es2020-properties.json (the edition's tables of Unicode property names and values)"
+    }
+  ],
   "spec_answers": {
     "file": "spec/answers.jsonl",
     "answers": 660,

@@ -31,6 +31,8 @@ jobs:
       run: node verify.js
     - name: The overlays for other versions of Unicode fit the data
       run: node unicode.js check
+    - name: The overlay of the ECMAScript 2020 grammar is what edition.js makes for the data
+      run: node edition.js check
     - name: The specification's answers where V8 departs fit the data
       run: node spec-answers.js check
     - name: Every exec call of test262 gives V8's answer again

@@ -441,14 +441,16 @@ const limits = { backtracks: 250000, limitMs: 250, threads: 4 };
   // The overlays for other versions of Unicode (data/unicode/) are kept too; unicode.js check fails while one no
   // longer fits the data, and the overlays are then made again. So are the entries of spec/answers.jsonl and
   // spec/unstable.jsonl, which spec-answers.js check holds to the data the same way, and so are the entries of the
-  // files of exec calls (data/exec/, written by test262-exec.js).
+  // files of exec calls (data/exec/, written by test262-exec.js), and the overlay of the ECMAScript 2020 grammar
+  // (data/edition/), which edition.js check holds to the data.
   const manifestPath = path.join(out, "manifest.json");
-  let overlays, specAnswers, specUnstable, exec;
+  let overlays, editions, specAnswers, specUnstable, exec;
   if (fs.existsSync(manifestPath)) {
     const kept = ["captures.jsonl", "test262.jsonl", "test262-lone-surrogates.jsonl", "ill-formed-utf8.jsonl"];
     const previous = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
     files.push(...previous.files.filter((f) => kept.includes(f.file)));
     overlays = previous.unicode_overlays;
+    editions = previous.edition_overlays;
     specAnswers = previous.spec_answers;
     specUnstable = previous.spec_unstable;
     exec = previous.exec;
@@ -457,6 +459,7 @@ const limits = { backtracks: 250000, limitMs: 250, threads: 4 };
     node: process.version, v8: process.versions.v8, unicode: process.versions.unicode,
     backtrack_budget: withBudget ? limits.backtracks : null, time_limit_ms: limits.limitMs, files,
     ...(overlays ? { unicode_overlays: overlays } : {}),
+    ...(editions ? { edition_overlays: editions } : {}),
     ...(specAnswers ? { spec_answers: specAnswers } : {}),
     ...(specUnstable ? { spec_unstable: specUnstable } : {}),
     ...(exec ? { exec } : {}),
