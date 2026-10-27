@@ -356,7 +356,7 @@ Each record names its test files in `test262`, so a failure can be read against 
 of its property and no other, a class of the `v` flag matches each of its strings and not the join of those it has
 not), `test262.js` compares it with V8's, and a pattern a test builds must be valid to V8, and the pattern of a
 negative syntax test not. Any difference stops the run. They agree everywhere: test262 has the character database
-of Unicode 17, and so has V8 13.6.233.17 in Node 24.22.0, which wrote these files. (With Node 24.11.0, whose V8 has
+of Unicode 17, and so has V8 13.6.233.17 in Node 24.22.1, which wrote these files. (With Node 24.11.0, whose V8 has
 Unicode 16, they differed on 7,216 answers: the characters and strings Unicode 17 changed, and the four scripts it
 added, `Beria_Erfe`, `Sidetic`, `Tai_Yo` and `Tolong_Siki`.)
 
@@ -618,7 +618,7 @@ An overlay belongs to the data it was made for: when the data is regenerated, th
 
 ## What to know before relying on it
 
-- **It records one implementation.** The answers are V8's (13.6.233.17, in Node 24.22.0), not the specification's. For the
+- **It records one implementation.** The answers are V8's (13.6.233.17, in Node 24.22.1), not the specification's. For the
   great majority of patterns they are the same thing.
 - **Known deviations.** V8 13.6 departs from ECMA-262 in six known ways, on 232 records. Those records have
   `"v8_deviation": true`. See the next section.
@@ -633,7 +633,7 @@ An overlay belongs to the data it was made for: when the data is regenerated, th
 
 ## Where V8 departs from ECMA-262
 
-The answers are V8's, from Node 24.22.0 (V8 13.6). In six known kinds of pattern that V8 is wrong, or does not always
+The answers are V8's, from Node 24.22.1 (V8 13.6). In six known kinds of pattern that V8 is wrong, or does not always
 give the same answer. Records of those kinds are marked `"v8_deviation": true`, with the kind in `deviation` (in
 `captures.jsonl` the mark is on the test). Runners skip them, and where V8's answer is wrong `spec/answers.jsonl` has
 the specification's (see [the specification's answers](#the-specifications-answers-where-v8-departs)).
@@ -727,7 +727,7 @@ node verify.js
 
 `verify.js` does not use the generator. It reads every record of every file, compiles the pattern again, matches
 every text again, and compares V8's answers with the recorded ones. It prints the patterns, tests and answers of
-each file, and checks the counts in `manifest.json` and the marks of the deviations. With Node 24.22.0 it reports no
+each file, and checks the counts in `manifest.json` and the marks of the deviations. With Node 24.22.1 it reports no
 disagreements in 11,674,962 answers. With another Node, a disagreement is a place where its V8 differs. It checks
 each file in a process of its own, because V8's answers for two of the hand-written patterns that it gets wrong
 (`(?i:\Bs)` and `(?i:\bk\b)`) change in a process that has compiled a great many patterns.
@@ -765,8 +765,9 @@ node generate.js
 After any regeneration, make the overlays of `data/unicode/` again (see
 [other versions of Unicode](#other-versions-of-unicode)); `node unicode.js check` fails while one is stale.
 
-This needs Node 24.22.0, the Node that wrote the data (a later V8 may answer otherwise, and V8 has had Unicode 17 since
-that release), and rewrites `data/`, all but the files that the three
+This needs Node 24.22.1, the Node that wrote the data (24.22.0, the release before it in the same line, with the same V8,
+gives the same files byte for byte; a later V8 may answer otherwise, and Node's V8 has had Unicode 17 since 24.22.0),
+and rewrites `data/`, all but the files that the three
 scripts below write, whose entries in `manifest.json` it keeps. The patterns and texts come from
 fixed lists and generators with fixed seeds, in `generate.js` for the first three files and in `families.js`,
 `more-families.js`, `unicode-sets.js` and `start-searches.js` for the families. Each family has a seed of its own. A run with the same Node gives the same

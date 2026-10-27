@@ -1,6 +1,6 @@
 {
-  "node": "v24.22.0",
-  "v8": "13.6.233.17-node.57",
+  "node": "v24.22.1",
+  "v8": "13.6.233.17-node.58",
   "unicode": "17.0",
   "backtrack_budget": 250000,
   "time_limit_ms": 250,
@@ -192,8 +192,8 @@
         "surrogate-pair-start": 16,
         "unstable": 1
       },
-      "node": "v24.22.0",
-      "v8": "13.6.233.17-node.57"
+      "node": "v24.22.1",
+      "v8": "13.6.233.17-node.58"
     },
     {
       "file": "ill-formed-utf8.jsonl",
@@ -218,8 +218,8 @@
       "candidates": 5559,
       "dropped_for_backtracks": 0,
       "dropped_for_time": 0,
-      "node": "v24.22.0",
-      "v8": "13.6.233.17-node.57",
+      "node": "v24.22.1",
+      "v8": "13.6.233.17-node.58",
       "unicode": "17.0",
       "test262": {
         "repository": "https://github.com/tc39/test262",
@@ -237,8 +237,8 @@
       "valid_unicode_sets": 3449,
       "valid_unicode_sets_only": 0,
       "v8_deviations": {},
-      "node": "v24.22.0",
-      "v8": "13.6.233.17-node.57",
+      "node": "v24.22.1",
+      "v8": "13.6.233.17-node.58",
       "unicode": "17.0",
       "test262": {
         "repository": "https://github.com/tc39/test262",
@@ -262,6 +262,14 @@
     "held": 31,
     "made_with": "the Corvus.Regex.Ecma262 data-set runner (--answers) where QuickJS-ng 0.17, SRELL 2026.07 and regress 0.12 were asked too, checked against engine262 (main at d553e7b, with engine262#378 fixed) and the text of ECMA-262; 31 answers that depend on tc39/ecma262#4006 are held"
   },
+  "spec_unstable": {
+    "file": "spec/unstable.jsonl",
+    "records": 33,
+    "capture_tests": 1,
+    "texts": 4849,
+    "answers": 8128,
+    "made_with": "the texts the generator gives the unstable records (DATASET_KEEP_UNSTABLE=1), answered by the data-set runners of Corvus.Regex.Ecma262 (.NET and Rust) and QuickJS-ng 0.17, which agree on every answer, with SRELL 2026.07 and regress 0.12 asked too, checked against engine262 (main at d553e7b, with engine262#378 fixed), which agrees wherever it parses the pattern (it has no Annex B syntax, so not the legacy grammar of unicode-sets.jsonl)"
+  },
   "exec": [
     {
       "file": "exec/test262.jsonl",
@@ -276,13 +284,5 @@
         "calls": 135390
       }
     }
-  ],
-  "spec_unstable": {
-    "file": "spec/unstable.jsonl",
-    "records": 33,
-    "capture_tests": 1,
-    "texts": 4849,
-    "answers": 8128,
-    "made_with": "the texts the generator gives the unstable records (DATASET_KEEP_UNSTABLE=1), answered by the data-set runners of Corvus.Regex.Ecma262 (.NET and Rust) and QuickJS-ng 0.17, which agree on every answer, with SRELL 2026.07 and regress 0.12 asked too, checked against engine262 (main at d553e7b, with engine262#378 fixed), which agrees wherever it parses the pattern (it has no Annex B syntax, so not the legacy grammar of unicode-sets.jsonl)"
-  }
+  ]
 }
