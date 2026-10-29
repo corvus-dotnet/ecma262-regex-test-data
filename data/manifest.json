@@ -174,20 +174,20 @@
     },
     {
       "file": "start-searches.jsonl",
-      "patterns": 2000,
-      "valid_unicode": 2000,
+      "patterns": 2055,
+      "valid_unicode": 2055,
       "valid_legacy_only": 0,
       "not_valid": 0,
-      "tests": 72001,
-      "candidates": 2000,
+      "tests": 76214,
+      "candidates": 2055,
       "dropped_for_backtracks": 0,
       "dropped_for_time": 0,
       "v8_deviations": {}
     },
     {
       "file": "captures.jsonl",
-      "patterns": 8457,
-      "tests": 306315,
+      "patterns": 8512,
+      "tests": 308476,
       "v8_deviations": {
         "surrogate-pair-start": 16,
         "unstable": 1
