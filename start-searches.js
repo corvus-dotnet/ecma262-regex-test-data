@@ -151,7 +151,49 @@ function startSearches(seed = 0x57a27001, count = 2000) {
     }
     add(pattern, flags, literal, sets);
   }
+  windowsOverWideCharacters(patterns, lists, seen);
   return { source: "start-searches", seeds, patterns, texts: [], lists, deviations: true };
+}
+
+// Windows over wide characters, after the patterns above so that theirs are unchanged. An engine that reads the terms
+// before a window's literal backwards from each occurrence tries a waiting start once no later occurrence could allow
+// an earlier one, and the reach of that look ahead is the window, which is a number of characters. The Corvus engines
+// in Rust, Go, Java and Julia looked that many bytes or code units ahead instead, so over two- and three-byte UTF-8,
+// or surrogate pairs under u, they missed the later occurrence and answered with a later start:
+// (?:b.{2,6})?x over "bx" and four of "\u017f" then "x" was matched at the second character, not the first. Each
+// pattern is an optional prefix and a bounded loop before a literal, and its texts are a character the prefix takes,
+// the literal, a run of one wide character of every length either side of the window's reach, and the literal again.
+// The fixed lists build the same patterns and texts in the same order on every run.
+const WINDOW_PREFIXES = ["b", R`[a-z]`, R`\w`];
+const WINDOW_LOOPS = [".", R`[\s\S]`, "[^a]"];
+const WINDOW_BOUNDS = ["{2,6}", "{1,8}", "{3,5}"];
+const WINDOW_LITERALS = ["x", "xy"];
+const WINDOW_RUNS = ["\u017f", "\u00e9", "\u0416", "\u20ac", "\u4e2d", "\u{1F600}", "a"];
+
+function windowsOverWideCharacters(patterns, lists, seen) {
+  const add = (pattern, flags, texts) => {
+    const key = flags + "/" + pattern;
+    if (seen.has(key)) return;
+    seen.add(key);
+    lists.push(unique(texts));
+    patterns.push({ pattern, flags, texts: lists.length - 1 });
+  };
+  // Each record is answered with u as well as without, as every record of the family is, so a surrogate pair is one
+  // character in one answer and two code units in the other.
+  for (const literal of WINDOW_LITERALS) {
+    const texts = [];
+    for (const w of WINDOW_RUNS) {
+      for (let k = 0; k <= 9; k++) texts.push("b" + literal + w.repeat(k) + literal);
+      texts.push(" b" + literal + w.repeat(4) + literal + " z", "b" + literal + w.repeat(3) + literal + w + literal);
+    }
+    for (const prefix of WINDOW_PREFIXES) {
+      for (const loop of WINDOW_LOOPS) {
+        for (const bounds of WINDOW_BOUNDS) add("(?:" + prefix + loop + bounds + ")?" + literal, "", texts);
+      }
+    }
+  }
+  // The pattern the Object Pascal port's fuzz found the fault with, and its text.
+  add(R`(|([^a]|[^a][^a]){2,4}){2}(\3){3,5}?x`, "", ["bx" + "\u017f".repeat(8) + "x"]);
 }
 
 module.exports = { startSearches };

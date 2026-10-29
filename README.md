@@ -443,7 +443,13 @@ also in `captures.jsonl`, whose answers say where each match is, which a `test` 
 The family was written when the Corvus .NET engine was found to step past starts in three ways that 26.9 million
 answers of the other files did not show: an occurrence of the literal with no run before it that begins the run before
 a later one, a later start of a run that passes an assertion the first failed (`\B\w+n` over `xan`), and a window back
-from a bounded loop counted in characters where the text is in bytes or code units. Its seeds are those shapes.
+from a bounded loop counted in characters where the text is in bytes or code units. Its seeds are those shapes. A
+last section, windows over wide characters, was added when the Corvus engines in Rust, Go, Java and Julia were found to
+look a window's reach ahead in bytes or code units rather than characters, and so to miss a later occurrence that
+allowed an earlier start (`(?:b.{2,6})?x` over `bx`, four `ſ` and `x`, matched from the second character): 54
+patterns of an optional prefix and a bounded loop before a literal, each against the literal, a run of one wide
+character of every length either side of the reach (two-, three- and four-byte UTF-8, and a surrogate pair, which is
+one character under `u`), and the literal again, and the pattern the Object Pascal port's fuzz found it with.
 `start-searches.js` writes it with a fixed seed. `fuzz.js` builds it with any other seed as a fuzzer (see
 [regenerating it](#regenerating-it)).
 
@@ -776,7 +782,7 @@ node verify.js
 `verify.js` does not use the generator. It reads every record of every file, compiles the pattern again, matches
 every text again, and compares V8's answers with the recorded ones. It prints the patterns, tests and answers of
 each file, and checks the counts in `manifest.json` and the marks of the deviations. With Node 24.22.1 it reports no
-disagreements in 11,674,962 answers. With another Node, a disagreement is a place where its V8 differs. It checks
+disagreements in 11,683,388 answers. With another Node, a disagreement is a place where its V8 differs. It checks
 each file in a process of its own, because V8's answers for two of the hand-written patterns that it gets wrong
 (`(?i:\Bs)` and `(?i:\bk\b)`) change in a process that has compiled a great many patterns.
 
