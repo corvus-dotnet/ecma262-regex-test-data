@@ -627,6 +627,11 @@ For 13.0, the same chain run on UCD 13.0.0 (its emoji sequence files are those o
    validities. The validities are the patterns that name a property value Unicode 13.0 does not have, such as a later
    script: 272 of `test262.jsonl` and 272 of `test262-lone-surrogates.jsonl`, each under `u` and under `v`, and 507
    of `captures.jsonl` under `u`. Judged on the data with the overlay applied, the 13.0 engine gives no wrong answer.
+   The runner writes a validity only for a grammar it has answers to judge, and the 52 records of `captures.jsonl`
+   that are valid under `v` have answers under `u` alone, so their `v` validity was missing. A grammar-only reader,
+   which asks every grammar a record names, found them (Corvus.Regex.Ecma262's Rust port, `is_valid_pattern`): each
+   names a script Unicode 13.0 does not have, as it does under `u`, so the overlay makes each not valid under `v` too.
+   That makes 66,452 lines and 1,647 validities.
 2. V8 had Unicode 13.0 too, in Node 16.0.0 (V8 9.0.257.17, ICU 69.1), which checks the overlay independently, under
    `u` (it has no `v` flag). Asked every `u` answer of every record of a file of tests that the overlay touches, with
    the overlay applied, it agrees on 528,289 of 528,430, and it refuses every pattern the overlay refuses. The 141
